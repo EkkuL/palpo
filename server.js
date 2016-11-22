@@ -62,6 +62,7 @@ router.get('/rest/movies/theater/:theater_id', function (req, res) {
         var movies = []
 
         events.forEach(function(movie) {
+          // Removing parenthesis, 3D and 2D from the title before request
           var title = movie.OriginalTitle.split("(", 1)
           title = title[0].split("3D", 1)
           title = title[0].split("2D", 1)
