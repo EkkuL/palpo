@@ -17,23 +17,22 @@ REST API toteutetaan Nodella ja palauttaa vastaukset JSON-formaatissa.
 
 ## REST Rajapinnan dokumentaatio
 
-### **Teatterit**
-
-#### /theaters
+### /theaters
   * **HTTP Method:** GET
     * **Media types:** application/json
     * **Description:** Palauttaa listan eri teatterivaihtoehdoista
     * **Status codes:** 
       * 200: If successful
 
-#### /movies/:date (Format: dd.mm.yyyy)
+### /movies/:date?theater={theater_id}
+  * Format: dd.mm.yyyy
   * **HTTP Method:** GET
     * **Media types:** application/json
     * **Description:** Palauttaa kaikki elokuvat joita näytetään finnkinon teattereissa annettuna päivänä.
     * **Status codes:** 
       * 200: If successful
 
-#### /movies/:theater?listType={NowInTheatres|ComingSoon}
+### /movies/:theater?listType={NowInTheatres|ComingSoon}
   * Defaults to NowInTheatres
   * **HTTP Method:** GET
     * **Media types:** application/json
@@ -41,9 +40,9 @@ REST API toteutetaan Nodella ja palauttaa vastaukset JSON-formaatissa.
     * **Status codes:** 
       * 200: If successful
 
-#### /movie/:movie_title
+### /movie?movie_title={title}&movie_id={id}
   * **HTTP Method:** GET
     * **Media types:** application/json
-    * **Description:** Palauttaa elokuvan tiedot ja arvostelut, sekä näytösajat jos niitä on.
+    * **Description:** Palauttaa elokuvan tiedot ja arvostelut, sekä näytösajat jos niitä on. Joko nimellä tai id:llä.
     * **Status codes:** 
-      * 200: If successful
+      * 200: If successfuln
