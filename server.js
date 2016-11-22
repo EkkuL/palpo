@@ -55,8 +55,42 @@ router.get('/rest/movies/theater/:theater_id', function (req, res) {
 	    	if(err)
 	    		res.sendStatus(500)
 	    		console.log(err)
-	    	res.status(200)
-    	    res.json(result)
+
+        var events = result.Events.Event
+        var maxRequests = events.length
+        var reqCount = 0
+        var movies = []
+
+        // TODO: Remove 2D/3D, (dub), (swe) ... from the title before request
+        // Also, movies that have many versions need only one request overall.
+        events.forEach(function(movie) {
+          var addr = 'http://www.omdbapi.com/?t=' + movie.OriginalTitle
+          var req = client.get(addr, function (data, response) {
+            if (data.Response == "True") {
+              var mov = {
+                "Title": movie.Title,
+                "imdbRating": data.imdbRating,
+                "imdbVotes": data.imdbVotes
+              }
+            // Movie is not found in the omdb database
+            } else {
+              var mov = {
+                "Title": movie.Title,
+                "imdbRating": "N/A",
+                "imdbVotes": "N/A"
+              }
+            }
+            movies.push(mov)
+            reqCount ++
+            //All movie requests have been received
+            if (reqCount == maxRequests) {
+                res.status(200)
+                res.json(movies)
+            }
+          });
+        });
+        //res.status(200)
+    	    //res.json(result)
 		})
 
 	})
@@ -70,7 +104,7 @@ router.get('/rest/movies/theater/:theater_id', function (req, res) {
 // Mount the router on the app
 app.use('/', router)
 
-// Print 404 when unable to find. 
+// Print 404 when unable to find.
 app.use(function(req, res){
    res.send("Not found.")
    res.sendStatus(404)
