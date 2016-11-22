@@ -41,7 +41,7 @@ router.get('/rest/theaters', function (req, res) {
 	})
 })
 
-// TODO: Include reviews & Handle errors
+// TODO: Handle errors
 // Get list of movies running on a theater based on id.
 router.get('/rest/movies/theater/:theater_id', function (req, res) {
 
@@ -61,10 +61,12 @@ router.get('/rest/movies/theater/:theater_id', function (req, res) {
         var reqCount = 0
         var movies = []
 
-        // TODO: Remove 2D/3D, (dub), (swe) ... from the title before request
-        // Also, movies that have many versions need only one request overall.
         events.forEach(function(movie) {
-          var addr = 'http://www.omdbapi.com/?t=' + movie.OriginalTitle
+          var title = movie.OriginalTitle.split("(", 1)
+          title = title[0].split("3D", 1)
+          title = title[0].split("2D", 1)
+          title = title[0]
+          var addr = 'http://www.omdbapi.com/?t=' + title
           var req = client.get(addr, function (data, response) {
             if (data.Response == "True") {
               var mov = {
@@ -84,13 +86,25 @@ router.get('/rest/movies/theater/:theater_id', function (req, res) {
             reqCount ++
             //All movie requests have been received
             if (reqCount == maxRequests) {
-                res.status(200)
-                res.json(movies)
+              movies.sort(function(a, b) {
+                if (a.imdbRating > b.imdbRating) {
+                  if (a.imdbRating == "N/A")
+                    return 1
+                  return -1
+                } else if (a.imdbRating < b.imdbRating) {
+                  if (b.imdbRating == "N/A")
+                    return -1
+                  return 1
+                } else {
+                  return 0
+                }
+              })
+
+              res.status(200)
+              res.json(movies)
             }
           });
         });
-        //res.status(200)
-    	    //res.json(result)
 		})
 
 	})
