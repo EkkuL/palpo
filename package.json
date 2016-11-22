@@ -1,0 +1,25 @@
+{
+  "name": "finnkinomoviereviews",
+  "version": "1.0.0",
+  "description": "REST API returning movies playing in Finnkino theaters and reviews",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/EkkuL/palpo.git"
+  },
+  "keywords": [
+    "Finnkino",
+    "OMDB",
+    "Movies",
+    "Reviews"
+  ],
+  "author": "Ekku Laukkarinen & Roope Pöyry",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/EkkuL/palpo/issues"
+  },
+  "homepage": "https://github.com/EkkuL/palpo#readme"
+}
