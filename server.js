@@ -26,8 +26,10 @@ router.get('/rest/theaters', function (req, res) {
 
 	    var xml = data
 	    parseString(xml, {explicitArray: false}, function (err, result) {
-	    	if(err)
+        if(err) {
+	    		res.sendStatus(500)
 	    		console.log(err)
+        }
 	    	res.status(200)
     	    res.json(result.TheatreAreas.TheatreArea)
 		})
@@ -54,9 +56,10 @@ router.get('/rest/movies/theater/:theater_id', function (req, res) {
 
 	    var xml = data
 	    parseString(xml, {explicitArray: false}, function (err, result) {
-	    	if(err)
+	    	if(err) {
 	    		res.sendStatus(500)
 	    		console.log(err)
+        }
 
         var events = result.Events.Event
         var maxRequests = events.length
@@ -71,7 +74,7 @@ router.get('/rest/movies/theater/:theater_id', function (req, res) {
           title = title[0]
           var addr = 'http://www.omdbapi.com/?t=' + title
           var req = client.get(addr, function (data, response) {
-            if (data.Response == "True") {
+            if (data.Response === "True") {
               var mov = {
                 "Title": movie.Title,
                 "imdbRating": data.imdbRating,
@@ -88,14 +91,14 @@ router.get('/rest/movies/theater/:theater_id', function (req, res) {
             movies.push(mov)
             reqCount ++
             //All movie requests have been received
-            if (reqCount == maxRequests) {
+            if (reqCount === maxRequests) {
               movies.sort(function(a, b) {
                 if (a.imdbRating > b.imdbRating) {
-                  if (a.imdbRating == "N/A")
+                  if (a.imdbRating === "N/A")
                     return 1
                   return -1
                 } else if (a.imdbRating < b.imdbRating) {
-                  if (b.imdbRating == "N/A")
+                  if (b.imdbRating === "N/A")
                     return -1
                   return 1
                 } else {
@@ -128,9 +131,10 @@ router.get('/rest/movies/date/:date', function (req, res) {
 
 	    var xml = data
 	    parseString(xml, {explicitArray: false}, function (err, result) {
-	    	if(err)
+	    	if(err) {
 	    		res.sendStatus(500)
 	    		console.log(err)
+        }
 
         var shows = result.Schedule.Shows.Show
         var movies = []
@@ -144,6 +148,84 @@ router.get('/rest/movies/date/:date', function (req, res) {
         res.json(movies)
       })
     })
+
+    req.on('error', function (err) {
+  		res.sendStatus(500)
+  	    console.log('request error', err)
+    })
+})
+
+// Get movie info and show times
+router.get('/rest/movie', function (req, res) {
+  var id = req.query.movie_id
+
+  // TODO: There could be some more error handling regardin the format of the id
+  if( id !== undefined && id !== "" )
+  	var req = client.get("http://www.finnkino.fi/xml/Events?eventID=" + id
+		  , function (data, response) {
+
+  	    var xml = data
+  	    parseString(xml, {explicitArray: false}, function (err, result) {
+  	    	if(err) {
+  	    		res.sendStatus(500)
+  	    		console.log(err)
+          }
+
+          var event = result.Events.Event
+
+          var title = event.OriginalTitle.split( "(" , 1)
+          title = title[0].split("3D", 1)
+          title = title[0].split("2D", 1)
+          title = title[0]
+          var addr = 'http://www.omdbapi.com/?t=' + title
+          var req = client.get(addr, function (data, response) {
+            var mov = {}
+
+            if (data.Response === "True") {
+              mov = {
+                "Title": event.Title,
+                "imdbRating": data.imdbRating,
+                "imdbVotes": data.imdbVotes
+              }
+            // Movie is not found in the omdb database
+            } else {
+              mov = {
+                "Title": event.Title,
+                "imdbRating": "N/A",
+                "imdbVotes": "N/A"
+              }
+            }
+
+            var req = client.get("http://www.finnkino.fi/xml/Schedule?eventID=" + id
+        		  , function (data, response) {
+                var xml = data
+          	    parseString(xml, {explicitArray: false}, function (err, result) {
+          	    	if(err) {
+          	    		res.sendStatus(500)
+          	    		console.log(err)
+                  }
+
+                  var shows = result.Schedule.Shows.Show
+                  var showTimes = []
+                  shows.forEach(function(show) {
+                    var showTime = {
+                      "Time": show.dttmShowStart,
+                      "Place": show.Theatre
+                    }
+
+                    showTimes.push(showTime)
+                  })
+
+                  mov["Shows"] = showTimes
+                  res.status(200)
+                  res.json(mov)
+                })
+              })
+          })
+        })
+      })
+
+    //var title = req.query.movie_title
 
     req.on('error', function (err) {
   		res.sendStatus(500)
