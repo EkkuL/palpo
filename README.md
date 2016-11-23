@@ -24,7 +24,7 @@ REST API toteutetaan Nodella ja palauttaa vastaukset JSON-formaatissa.
     * **Status codes:** 
       * 200: If successful
 
-### /movies/:date?theater={theater_id}
+### /movies/date/:date?theater={theater_id}
   * Format: dd.mm.yyyy
   * **HTTP Method:** GET
     * **Media types:** application/json
@@ -32,11 +32,17 @@ REST API toteutetaan Nodella ja palauttaa vastaukset JSON-formaatissa.
     * **Status codes:** 
       * 200: If successful
 
-### /movies/:theater?listType={NowInTheatres|ComingSoon}
-  * Defaults to NowInTheatres
+### /movies/theater/:theater
   * **HTTP Method:** GET
     * **Media types:** application/json
     * **Description:** Palauttaa teatterissa näkyvät elokuvat ja niiden arvostelut
+    * **Status codes:** 
+      * 200: If successful
+      
+### /movies/coming
+  * **HTTP Method:** GET
+    * **Media types:** application/json
+    * **Description:** Palauttaa tulossa olevat elokuvat ja niiden arvostelut
     * **Status codes:** 
       * 200: If successful
 
