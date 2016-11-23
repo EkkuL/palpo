@@ -32,17 +32,11 @@ REST API toteutetaan Nodella ja palauttaa vastaukset JSON-formaatissa.
     * **Status codes:** 
       * 200: If successful
 
-### /movies/theater/:theater
+### /movies/theater/:theater?listType={NowInTheatres|ComingSoon}
+  * Defaults to NowInTheatres
   * **HTTP Method:** GET
     * **Media types:** application/json
-    * **Description:** Palauttaa teatterissa näkyvät elokuvat ja niiden arvostelut
-    * **Status codes:** 
-      * 200: If successful
-      
-### /movies/coming
-  * **HTTP Method:** GET
-    * **Media types:** application/json
-    * **Description:** Palauttaa tulossa olevat elokuvat ja niiden arvostelut
+    * **Description:** Palauttaa teatterissa näkyvät elokuvat ja niiden arvostelut. Jos listType=ComingSoon, näytetään kaikki tulevat                          elokuvat teatterista riippumatta
     * **Status codes:** 
       * 200: If successful
 
