@@ -12,6 +12,16 @@ var client = new Client()
 // For parsing XML to JSON
 var parseString = require('xml2js').parseString
 
+// Function for removing parenthesis and 3D/2D abbreviations from the movie title
+// because the omdb title search must be done without these.
+function cutString(s){
+  var x = s.split("(", 1)
+  x = x[0].split("3D", 1)
+  x = x[0].split("2D", 1)
+  x = x[0]
+  return x
+}
+
 
 // Print timestamp and request url & params for each query.
 router.use(function timeLog (req, res, next) {
@@ -68,10 +78,7 @@ router.get('/rest/movies/theater/:theater_id', function (req, res) {
 
         events.forEach(function(movie) {
           // Removing parenthesis, 3D and 2D from the title before request
-          var title = movie.OriginalTitle.split("(", 1)
-          title = title[0].split("3D", 1)
-          title = title[0].split("2D", 1)
-          title = title[0]
+          var title = cutString(movie.OriginalTitle)
           var addr = 'http://www.omdbapi.com/?t=' + title
           var req = client.get(addr, function (data, response) {
             if (data.Response === "True") {
@@ -158,74 +165,76 @@ router.get('/rest/movies/date/:date', function (req, res) {
 // Get movie info and show times
 router.get('/rest/movie', function (req, res) {
   var id = req.query.movie_id
+  var title = req.query.movie_title
+  var addr = ""
 
   // TODO: There could be some more error handling regardin the format of the id
   if( id !== undefined && id !== "" )
-  	var req = client.get("http://www.finnkino.fi/xml/Events?eventID=" + id
-		  , function (data, response) {
+    addr = "http://www.finnkino.fi/xml/Events?eventID=" + id
+  else if (title !== undefined && title !== "") {
+      // TODO: getting movie with the title
+  } else {
+    res.sendStatus(400)
+    console.log("Movie not found!")
+  }
 
-  	    var xml = data
-  	    parseString(xml, {explicitArray: false}, function (err, result) {
-  	    	if(err) {
-  	    		res.sendStatus(500)
-  	    		console.log(err)
+	var req = client.get(addr, function (data, response) {
+
+    var xml = data
+    parseString(xml, {explicitArray: false}, function (err, result) {
+    	if(err) {
+    		res.sendStatus(500)
+    		console.log(err)
+      }
+
+      var event = result.Events.Event
+      var title = cutString(event.OriginalTitle)
+      var addr = 'http://www.omdbapi.com/?t=' + title
+      var req = client.get(addr, function (data, response) {
+        var mov = {}
+        if (data.Response === "True") {
+          mov = {
+            "Title": event.Title,
+            "imdbRating": data.imdbRating,
+            "imdbVotes": data.imdbVotes
           }
+        // Movie is not found in the omdb database
+        } else {
+          mov = {
+            "Title": event.Title,
+            "imdbRating": "N/A",
+            "imdbVotes": "N/A"
+          }
+        }
 
-          var event = result.Events.Event
-
-          var title = event.OriginalTitle.split( "(" , 1)
-          title = title[0].split("3D", 1)
-          title = title[0].split("2D", 1)
-          title = title[0]
-          var addr = 'http://www.omdbapi.com/?t=' + title
-          var req = client.get(addr, function (data, response) {
-            var mov = {}
-
-            if (data.Response === "True") {
-              mov = {
-                "Title": event.Title,
-                "imdbRating": data.imdbRating,
-                "imdbVotes": data.imdbVotes
+        var req = client.get("http://www.finnkino.fi/xml/Schedule?eventID=" + id
+    		  , function (data, response) {
+            var xml = data
+      	    parseString(xml, {explicitArray: false}, function (err, result) {
+      	    	if(err) {
+      	    		res.sendStatus(500)
+      	    		console.log(err)
               }
-            // Movie is not found in the omdb database
-            } else {
-              mov = {
-                "Title": event.Title,
-                "imdbRating": "N/A",
-                "imdbVotes": "N/A"
-              }
-            }
 
-            var req = client.get("http://www.finnkino.fi/xml/Schedule?eventID=" + id
-        		  , function (data, response) {
-                var xml = data
-          	    parseString(xml, {explicitArray: false}, function (err, result) {
-          	    	if(err) {
-          	    		res.sendStatus(500)
-          	    		console.log(err)
-                  }
+              var shows = result.Schedule.Shows.Show
+              var showTimes = []
+              shows.forEach(function(show) {
+                var showTime = {
+                  "Time": show.dttmShowStart,
+                  "Place": show.Theatre
+                }
 
-                  var shows = result.Schedule.Shows.Show
-                  var showTimes = []
-                  shows.forEach(function(show) {
-                    var showTime = {
-                      "Time": show.dttmShowStart,
-                      "Place": show.Theatre
-                    }
-
-                    showTimes.push(showTime)
-                  })
-
-                  mov["Shows"] = showTimes
-                  res.status(200)
-                  res.json(mov)
-                })
+                showTimes.push(showTime)
               })
+
+              mov["Shows"] = showTimes
+              res.status(200)
+              res.json(mov)
+            })
           })
         })
       })
-
-    //var title = req.query.movie_title
+    })
 
     req.on('error', function (err) {
   		res.sendStatus(500)
