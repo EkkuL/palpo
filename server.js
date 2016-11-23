@@ -45,7 +45,9 @@ router.get('/rest/theaters', function (req, res) {
 // Get list of movies running on a theater based on id.
 router.get('/rest/movies/theater/:theater_id', function (req, res) {
 
-	var listType = "NowInTheatres"
+  var listType = "NowInTheatres"
+  listType = req.query.listType
+  console.log(listType);
 
 	var req = client.get("http://www.finnkino.fi/xml/Events?listType=" + listType + "&area=" + req.params.theater_id
 		, function (data, response) {
@@ -114,6 +116,39 @@ router.get('/rest/movies/theater/:theater_id', function (req, res) {
 		res.sendStatus(500)
 	    console.log('request error', err)
 	})
+})
+
+// Get list of movies showing on a given date and area
+router.get('/rest/movies/date/:date', function (req, res) {
+  var date = req.params.date
+  var theater = req.query.theater
+
+	var req = client.get("http://www.finnkino.fi/xml/Schedule?dt=" + date + "&area=" + theater
+		, function (data, response) {
+
+	    var xml = data
+	    parseString(xml, {explicitArray: false}, function (err, result) {
+	    	if(err)
+	    		res.sendStatus(500)
+	    		console.log(err)
+
+        var shows = result.Schedule.Shows.Show
+        var movies = []
+
+        shows.forEach(function(show) {
+          if( !movies.includes(show.Title) )
+            movies.push(show.Title)
+        })
+
+        res.status(200)
+        res.json(movies)
+      })
+    })
+
+    req.on('error', function (err) {
+  		res.sendStatus(500)
+  	    console.log('request error', err)
+    })
 })
 
 // Mount the router on the app
