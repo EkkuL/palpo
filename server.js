@@ -242,6 +242,42 @@ router.get('/rest/movie', function (req, res) {
     })
 })
 
+// Get the movie id based on the title
+router.get('/rest/movie/id/:title', function (req, res) {
+  var title = req.params.title
+  var listType = "NowInTheatres"
+  var movies = []
+
+  for( var i = 0; i < 2; i++ ) {
+    var req = client.get("http://www.finnkino.fi/xml/Events?listType=" + listType
+      , function (data, response) {
+console.log("request");
+        var xml = data
+        parseString(xml, {explicitArray: false}, function (err, result) {
+          if(err) {
+            res.sendStatus(500)
+            console.log(err)
+          }
+
+          var events = result.Events.Event
+          events.forEach(function(movie) {
+            if( movie.Title.toLowerCase().includes(title.toLowerCase()) ||
+                movie.OriginalTitle.toLowerCase().includes(title.toLowerCase()) ) {
+                  var mov = {
+                    "Title" : movie.Title,
+                    "ID" : movie.ID,
+                  }
+                  movies.push(mov)
+            }
+          });
+      })
+    })
+    listType = "ComingSoon"
+  }
+  res.status(200)
+  res.json(movies)
+})
+
 // Mount the router on the app
 app.use('/', router)
 
