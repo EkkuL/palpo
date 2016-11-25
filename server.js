@@ -22,6 +22,34 @@ function cutString(s){
   return x
 }
 
+function getIdByTitle(title, listType){
+  var movies = []
+  var req = client.get("http://www.finnkino.fi/xml/Events?listType=" + listType
+    , function (data, response) {
+      console.log(req.options);
+      var xml = data
+      parseString(xml, {explicitArray: false}, function (err, result) {
+        if(err) {
+          res.sendStatus(500)
+          console.log(err)
+        }
+
+        var events = result.Events.Event
+        events.forEach(function(movie) {
+          if( movie.Title.toLowerCase().includes(title.toLowerCase()) ||
+              movie.OriginalTitle.toLowerCase().includes(title.toLowerCase()) ) {
+                var mov = {
+                  "Title" : movie.Title,
+                  "ID" : movie.ID,
+                  "Status" : listType
+                }
+                movies.push(mov)
+          }
+        });
+      })
+      return movies
+  })
+}
 
 // Print timestamp and request url & params for each query.
 router.use(function timeLog (req, res, next) {
@@ -247,11 +275,18 @@ router.get('/rest/movie/id/:title', function (req, res) {
   var title = req.params.title
   var listType = "NowInTheatres"
   var movies = []
+  var maxRequests = 2
+  var reqCount = 0
 
-  for( var i = 0; i < 2; i++ ) {
+  var movies = getIdByTitle(title, listType, movies)
+  console.log(movies);
+  res.status(200)
+  res.json(movies)
+
+  /*for( var i = 0; i < 2; i++ ) {
     var req = client.get("http://www.finnkino.fi/xml/Events?listType=" + listType
       , function (data, response) {
-console.log("request");
+        console.log(req.options);
         var xml = data
         parseString(xml, {explicitArray: false}, function (err, result) {
           if(err) {
@@ -266,16 +301,20 @@ console.log("request");
                   var mov = {
                     "Title" : movie.Title,
                     "ID" : movie.ID,
+                    "Status" : i
                   }
                   movies.push(mov)
             }
           });
       })
+      reqCount++
+      if( reqCount === maxRequests ){
+        res.status(200)
+        res.json(movies)
+      }
     })
     listType = "ComingSoon"
-  }
-  res.status(200)
-  res.json(movies)
+  }*/
 })
 
 // Mount the router on the app
