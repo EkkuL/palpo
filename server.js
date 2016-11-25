@@ -12,6 +12,16 @@ var client = new Client()
 // For parsing XML to JSON
 var parseString = require('xml2js').parseString
 
+function parseXml(xml, callback){
+  parseString(xml, {explicitArray: false}, function (err, result) {
+    if(err) {
+      console.log(err)
+      return "error"
+    }
+    callback(result)
+  })
+}
+
 // Function for removing parenthesis and 3D/2D abbreviations from the movie title
 // because the omdb title search must be done without these.
 function cutString(s){
@@ -22,33 +32,35 @@ function cutString(s){
   return x
 }
 
-function getIdByTitle(title, listType){
-  var movies = []
+// Function for checking if the searched title is found from movie list.
+function checkTitle(title, movies, result, listType, callback){
+  movies.forEach(function(movie) {
+    if( movie.Title.toLowerCase().includes(title.toLowerCase()) ||
+        movie.OriginalTitle.toLowerCase().includes(title.toLowerCase()) ) {
+          var mov = {
+            "Title" : movie.Title,
+            "ID" : movie.ID,
+            "Status" : listType
+          }
+          result.push(mov)
+    }
+  })
+  callback(result)
+}
+
+function getIdByTitle(title, listType, movies, callback){
   var req = client.get("http://www.finnkino.fi/xml/Events?listType=" + listType
     , function (data, response) {
-      console.log(req.options);
-      var xml = data
-      parseString(xml, {explicitArray: false}, function (err, result) {
-        if(err) {
-          res.sendStatus(500)
-          console.log(err)
-        }
 
-        var events = result.Events.Event
-        events.forEach(function(movie) {
-          if( movie.Title.toLowerCase().includes(title.toLowerCase()) ||
-              movie.OriginalTitle.toLowerCase().includes(title.toLowerCase()) ) {
-                var mov = {
-                  "Title" : movie.Title,
-                  "ID" : movie.ID,
-                  "Status" : listType
-                }
-                movies.push(mov)
-          }
-        });
-      })
-      return movies
-  })
+      var result = parseXml(data, searchMovies)
+
+      function searchMovies(result) {
+        if(result === "error")
+          res.sendStatus(500)
+
+        checkTitle(title, result.Events.Event, movies, listType, callback )
+      }
+    })
 }
 
 // Print timestamp and request url & params for each query.
@@ -87,7 +99,6 @@ router.get('/rest/movies/theater/:theater_id', function (req, res) {
 
   var listType = "NowInTheatres"
   listType = req.query.listType
-  console.log(listType);
 
 	var req = client.get("http://www.finnkino.fi/xml/Events?listType=" + listType + "&area=" + req.params.theater_id
 		, function (data, response) {
@@ -273,48 +284,19 @@ router.get('/rest/movie', function (req, res) {
 // Get the movie id based on the title
 router.get('/rest/movie/id/:title', function (req, res) {
   var title = req.params.title
-  var listType = "NowInTheatres"
-  var movies = []
-  var maxRequests = 2
-  var reqCount = 0
+  var arr = []
+  getIdByTitle(title, "NowInTheatres", arr, handleMovies)
 
-  var movies = getIdByTitle(title, listType, movies)
-  console.log(movies);
-  res.status(200)
-  res.json(movies)
+  // Callback to be used after the first request is ready
+  function handleMovies( movies ){
+    getIdByTitle(title, "ComingSoon", movies, handleBoth)
+  }
 
-  /*for( var i = 0; i < 2; i++ ) {
-    var req = client.get("http://www.finnkino.fi/xml/Events?listType=" + listType
-      , function (data, response) {
-        console.log(req.options);
-        var xml = data
-        parseString(xml, {explicitArray: false}, function (err, result) {
-          if(err) {
-            res.sendStatus(500)
-            console.log(err)
-          }
-
-          var events = result.Events.Event
-          events.forEach(function(movie) {
-            if( movie.Title.toLowerCase().includes(title.toLowerCase()) ||
-                movie.OriginalTitle.toLowerCase().includes(title.toLowerCase()) ) {
-                  var mov = {
-                    "Title" : movie.Title,
-                    "ID" : movie.ID,
-                    "Status" : i
-                  }
-                  movies.push(mov)
-            }
-          });
-      })
-      reqCount++
-      if( reqCount === maxRequests ){
-        res.status(200)
-        res.json(movies)
-      }
-    })
-    listType = "ComingSoon"
-  }*/
+  // Callback after both requests are ready
+  function handleBoth( movies ){
+    res.status(200)
+    res.json(movies)
+  }
 })
 
 // Mount the router on the app
