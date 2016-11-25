@@ -94,12 +94,12 @@ router.get('/rest/theaters', function (req, res) {
 
 // TODO: Handle errors
 // Get list of movies running on a theater based on id.
-router.get('/rest/movies/theater/:theater_id', function (req, res) {
+router.get('/rest/movies/theater/:id', function (req, res) {
 
   var listType = "NowInTheatres"
   listType = req.query.listType
 
-	var req = client.get("http://www.finnkino.fi/xml/Events?listType=" + listType + "&area=" + req.params.theater_id
+	var req = client.get("http://www.finnkino.fi/xml/Events?listType=" + listType + "&area=" + req.params.id
 		, function (data, response) {
       parseXml(data, getMovies)
 
@@ -196,8 +196,8 @@ router.get('/rest/movies/date/:date', function (req, res) {
 })
 
 // Get movie info and show times
-router.get('/rest/movie', function (req, res) {
-  var id = req.query.movie_id
+router.get('/rest/movie/info/:id', function (req, res) {
+  var id = req.params.id
   var title = req.query.movie_title
   var addr = ""
 
