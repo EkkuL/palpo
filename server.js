@@ -63,6 +63,63 @@ function getIdByTitle(title, listType, movies, callback){
     })
 }
 
+function getRating( title, callback ){
+  var addr = 'http://www.omdbapi.com/?t=' + title
+  var req = client.get(addr, function (data, response) {
+    if (data.Response === "True") {
+      var movie = {
+        "Title": title,
+        "imdbRating": data.imdbRating,
+        "imdbVotes": data.imdbVotes
+      }
+    // Movie is not found in the omdb database
+    } else {
+      var movie = {
+        "Title": title,
+        "imdbRating": "N/A",
+        "imdbVotes": "N/A"
+      }
+    }
+    callback(movie)
+  })
+}
+
+function sortRatings( movies, callback ){
+  movies.sort(function(a, b) {
+    if (a.imdbRating > b.imdbRating) {
+      if (a.imdbRating === "N/A")
+        return 1
+      return -1
+    } else if (a.imdbRating < b.imdbRating) {
+      if (b.imdbRating === "N/A")
+        return -1
+      return 1
+    } else {
+      return 0
+    }
+  })
+  callback( movies )
+}
+
+function collectRatings( movies, callback ){
+  var result = []
+  var maxRequests = movies.length
+  var reqCount = 0
+
+  movies.forEach(function(movie) {
+    // Removing parenthesis, 3D and 2D from the title before request
+    getRating( cutString(movie.OriginalTitle), add2Results )
+
+    function add2Results(movie){
+      result.push(movie)
+      reqCount ++
+      //All movie requests have been received
+      if (reqCount === maxRequests)
+        sortRatings( result, callback )
+    }
+  })
+}
+
 // Print timestamp and request url & params for each query.
 router.use(function timeLog (req, res, next) {
   console.log('[', Date.now().toString(), '] Url: ', req.url, "Request params: ", req.params)
@@ -107,53 +164,12 @@ router.get('/rest/movies/theater/:id', function (req, res) {
         if(result === "error")
           res.sendStatus(500)
 
-        var events = result.Events.Event
-        var maxRequests = events.length
-        var reqCount = 0
-        var movies = []
+        collectRatings( result.Events.Event, handleResults )
 
-        events.forEach(function(movie) {
-          // Removing parenthesis, 3D and 2D from the title before request
-          var title = cutString(movie.OriginalTitle)
-          var addr = 'http://www.omdbapi.com/?t=' + title
-          var req = client.get(addr, function (data, response) {
-            if (data.Response === "True") {
-              var mov = {
-                "Title": movie.Title,
-                "imdbRating": data.imdbRating,
-                "imdbVotes": data.imdbVotes
-              }
-            // Movie is not found in the omdb database
-            } else {
-              var mov = {
-                "Title": movie.Title,
-                "imdbRating": "N/A",
-                "imdbVotes": "N/A"
-              }
-            }
-            movies.push(mov)
-            reqCount ++
-            //All movie requests have been received
-            if (reqCount === maxRequests) {
-              movies.sort(function(a, b) {
-                if (a.imdbRating > b.imdbRating) {
-                  if (a.imdbRating === "N/A")
-                    return 1
-                  return -1
-                } else if (a.imdbRating < b.imdbRating) {
-                  if (b.imdbRating === "N/A")
-                    return -1
-                  return 1
-                } else {
-                  return 0
-                }
-              })
-
-              res.status(200)
-              res.json(movies)
-            }
-          });
-        });
+        function handleResults( movies ){
+          res.status(200)
+          res.json(movies)
+        }
       }
 	})
 
