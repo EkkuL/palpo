@@ -52,7 +52,7 @@ function getIdByTitle(title, listType, movies, callback){
   var req = client.get("http://www.finnkino.fi/xml/Events?listType=" + listType
     , function (data, response) {
 
-      var result = parseXml(data, searchMovies)
+      parseXml(data, searchMovies)
 
       function searchMovies(result) {
         if(result === "error")
@@ -74,16 +74,15 @@ router.use(function timeLog (req, res, next) {
 router.get('/rest/theaters', function (req, res) {
 	var req = client.get("http://www.finnkino.fi/xml/TheatreAreas", function (data, response) {
 
-	    var xml = data
-	    parseString(xml, {explicitArray: false}, function (err, result) {
-        if(err) {
-	    		res.sendStatus(500)
-	    		console.log(err)
-        }
-	    	res.status(200)
-    	    res.json(result.TheatreAreas.TheatreArea)
-		})
+      parseXml(data, sendTheaters)
 
+      function sendTheaters(result) {
+        if(result === "error")
+          res.sendStatus(500)
+
+        res.status(200)
+  	    res.json(result.TheatreAreas.TheatreArea)
+      }
 	})
 
 	req.on('error', function (err) {
@@ -102,13 +101,11 @@ router.get('/rest/movies/theater/:theater_id', function (req, res) {
 
 	var req = client.get("http://www.finnkino.fi/xml/Events?listType=" + listType + "&area=" + req.params.theater_id
 		, function (data, response) {
+      parseXml(data, getMovies)
 
-	    var xml = data
-	    parseString(xml, {explicitArray: false}, function (err, result) {
-	    	if(err) {
-	    		res.sendStatus(500)
-	    		console.log(err)
-        }
+      function getMovies(result) {
+        if(result === "error")
+          res.sendStatus(500)
 
         var events = result.Events.Event
         var maxRequests = events.length
@@ -157,8 +154,7 @@ router.get('/rest/movies/theater/:theater_id', function (req, res) {
             }
           });
         });
-		})
-
+      }
 	})
 
 	req.on('error', function (err) {
@@ -174,13 +170,11 @@ router.get('/rest/movies/date/:date', function (req, res) {
 
 	var req = client.get("http://www.finnkino.fi/xml/Schedule?dt=" + date + "&area=" + theater
 		, function (data, response) {
+      parseXml(data, handleMovies)
 
-	    var xml = data
-	    parseString(xml, {explicitArray: false}, function (err, result) {
-	    	if(err) {
-	    		res.sendStatus(500)
-	    		console.log(err)
-        }
+      function handleMovies(result) {
+        if(result === "error")
+          res.sendStatus(500)
 
         var shows = result.Schedule.Shows.Show
         var movies = []
@@ -192,7 +186,7 @@ router.get('/rest/movies/date/:date', function (req, res) {
 
         res.status(200)
         res.json(movies)
-      })
+      }
     })
 
     req.on('error', function (err) {
@@ -210,21 +204,17 @@ router.get('/rest/movie', function (req, res) {
   // TODO: There could be some more error handling regardin the format of the id
   if( id !== undefined && id !== "" )
     addr = "http://www.finnkino.fi/xml/Events?eventID=" + id
-  else if (title !== undefined && title !== "") {
-      // TODO: getting movie with the title
-  } else {
+  else {
     res.sendStatus(400)
     console.log("Movie not found!")
   }
 
 	var req = client.get(addr, function (data, response) {
+    parseXml(data, handleMovieInfo)
 
-    var xml = data
-    parseString(xml, {explicitArray: false}, function (err, result) {
-    	if(err) {
-    		res.sendStatus(500)
-    		console.log(err)
-      }
+    function handleMovieInfo(result) {
+      if(result === "error")
+        res.sendStatus(500)
 
       var event = result.Events.Event
       var title = cutString(event.OriginalTitle)
@@ -247,13 +237,12 @@ router.get('/rest/movie', function (req, res) {
         }
 
         var req = client.get("http://www.finnkino.fi/xml/Schedule?eventID=" + id
-    		  , function (data, response) {
-            var xml = data
-      	    parseString(xml, {explicitArray: false}, function (err, result) {
-      	    	if(err) {
-      	    		res.sendStatus(500)
-      	    		console.log(err)
-              }
+          , function (data, response) {
+            parseXml(data, handleShows)
+
+            function handleShows(result) {
+              if(result === "error")
+                res.sendStatus(500)
 
               var shows = result.Schedule.Shows.Show
               var showTimes = []
@@ -262,17 +251,16 @@ router.get('/rest/movie', function (req, res) {
                   "Time": show.dttmShowStart,
                   "Place": show.Theatre
                 }
-
                 showTimes.push(showTime)
               })
 
               mov["Shows"] = showTimes
               res.status(200)
               res.json(mov)
-            })
+            }
           })
         })
-      })
+      }
     })
 
     req.on('error', function (err) {
