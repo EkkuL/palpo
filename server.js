@@ -198,12 +198,10 @@ router.get('/rest/movies/date/:date', function (req, res) {
 // Get movie info and show times
 router.get('/rest/movie/info/:id', function (req, res) {
   var id = req.params.id
-  var title = req.query.movie_title
-  var addr = ""
 
   // TODO: There could be some more error handling regardin the format of the id
   if( id !== undefined && id !== "" )
-    addr = "http://www.finnkino.fi/xml/Events?eventID=" + id
+    var addr = "http://www.finnkino.fi/xml/Events?eventID=" + id
   else {
     res.sendStatus(400)
     console.log("Movie not found!")
