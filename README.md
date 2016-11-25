@@ -50,6 +50,6 @@ REST API toteutetaan Nodella ja palauttaa vastaukset JSON-formaatissa.
 ### /movie/id/:title
   * **HTTP Method:** GET
     * **Media types:** application/json
-    * **Description:** Palauttaa kaikkie elokuvat nimen ja id:n kanssa, joiden nimessä on annettu :title.
+    * **Description:** Palauttaa kaikki elokuvat nimen ja id:n kanssa, joiden nimessä on annettu :title.
     * **Status codes:**
       * 200: If successful
