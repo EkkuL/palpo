@@ -120,6 +120,15 @@ function collectRatings( movies, callback ){
   })
 }
 
+function findMovies(shows, callback){
+  var movies = []
+  shows.forEach(function(show) {
+    if( !movies.includes(show.Title) )
+      movies.push(show.Title)
+  })
+  callback(movies)
+}
+
 // Print timestamp and request url & params for each query.
 router.use(function timeLog (req, res, next) {
   console.log('[', Date.now().toString(), '] Url: ', req.url, "Request params: ", req.params)
@@ -186,22 +195,19 @@ router.get('/rest/movies/date/:date', function (req, res) {
 
 	var req = client.get("http://www.finnkino.fi/xml/Schedule?dt=" + date + "&area=" + theater
 		, function (data, response) {
+      console.log(req.options);
       parseXml(data, handleMovies)
 
       function handleMovies(result) {
         if(result === "error")
           res.sendStatus(500)
 
-        var shows = result.Schedule.Shows.Show
-        var movies = []
+        findMovies(result.Schedule.Shows.Show, handleResult)
 
-        shows.forEach(function(show) {
-          if( !movies.includes(show.Title) )
-            movies.push(show.Title)
-        })
-
-        res.status(200)
-        res.json(movies)
+        function handleResult(result){
+          res.status(200)
+          res.json(result)
+        }
       }
     })
 
@@ -211,76 +217,71 @@ router.get('/rest/movies/date/:date', function (req, res) {
     })
 })
 
-// Get movie info and show times
-router.get('/rest/movie/info/:id', function (req, res) {
-  var id = req.params.id
+function getSchedule( id, movie, callback ){
+  var req = client.get("http://www.finnkino.fi/xml/Schedule?eventID=" + id
+    , function (data, response) {
+      parseXml(data, handleShows)
 
+      function handleShows(result) {
+        if(result === "error")
+          res.sendStatus(500)
+
+        var shows = result.Schedule.Shows.Show
+        var showTimes = []
+        shows.forEach(function(show) {
+          var showTime = {
+            "Time": show.dttmShowStart,
+            "Place": show.Theatre
+          }
+          showTimes.push(showTime)
+        })
+
+        movie["Shows"] = showTimes
+        callback( 200, movie )
+      }
+    })
+}
+
+function getMovieInfo(id, callback){
   // TODO: There could be some more error handling regardin the format of the id
   if( id !== undefined && id !== "" )
     var addr = "http://www.finnkino.fi/xml/Events?eventID=" + id
   else {
-    res.sendStatus(400)
-    console.log("Movie not found!")
+    callback(400, "error")
   }
 
-	var req = client.get(addr, function (data, response) {
+  var req = client.get(addr, function (data, response) {
     parseXml(data, handleMovieInfo)
 
     function handleMovieInfo(result) {
       if(result === "error")
-        res.sendStatus(500)
+        callback(500, "error")
 
-      var event = result.Events.Event
-      var title = cutString(event.OriginalTitle)
-      var addr = 'http://www.omdbapi.com/?t=' + title
-      var req = client.get(addr, function (data, response) {
-        var mov = {}
-        if (data.Response === "True") {
-          mov = {
-            "Title": event.Title,
-            "imdbRating": data.imdbRating,
-            "imdbVotes": data.imdbVotes
-          }
-        // Movie is not found in the omdb database
-        } else {
-          mov = {
-            "Title": event.Title,
-            "imdbRating": "N/A",
-            "imdbVotes": "N/A"
-          }
-        }
-
-        var req = client.get("http://www.finnkino.fi/xml/Schedule?eventID=" + id
-          , function (data, response) {
-            parseXml(data, handleShows)
-
-            function handleShows(result) {
-              if(result === "error")
-                res.sendStatus(500)
-
-              var shows = result.Schedule.Shows.Show
-              var showTimes = []
-              shows.forEach(function(show) {
-                var showTime = {
-                  "Time": show.dttmShowStart,
-                  "Place": show.Theatre
-                }
-                showTimes.push(showTime)
-              })
-
-              mov["Shows"] = showTimes
-              res.status(200)
-              res.json(mov)
-            }
-          })
-        })
+      getRating( cutString(result.Events.Event.OriginalTitle ), handleResult)
+      function handleResult(movie){
+        getSchedule( id, movie, callback)
       }
-    })
+    }
+  })
+}
 
-    req.on('error', function (err) {
-  		res.sendStatus(500)
-  	    console.log('request error', err)
-    })
+// Get movie info and show times
+router.get('/rest/movie/info/:id', function (req, res) {
+  getMovieInfo( req.params.id, handle )
+
+  function handle( code, result ){
+    if( result === "error" ){
+      res.sendStatus(code)
+      console.log("Movie not found!")
+    }
+    res.status(code)
+    res.json(result)
+  }
+
+  req.on('error', function (err) {
+		res.sendStatus(500)
+    console.log('request error', err)
+  })
 })
 
 // Get the movie id based on the title
