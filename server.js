@@ -129,6 +129,54 @@ function findMovies(shows, callback){
   callback(movies)
 }
 
+function getSchedule( id, movie, callback ){
+  var req = client.get("http://www.finnkino.fi/xml/Schedule?eventID=" + id
+    , function (data, response) {
+      parseXml(data, handleShows)
+
+      function handleShows(result) {
+        if(result === "error")
+          res.sendStatus(500)
+
+        var shows = result.Schedule.Shows.Show
+        var showTimes = []
+        shows.forEach(function(show) {
+          var showTime = {
+            "Time": show.dttmShowStart,
+            "Place": show.Theatre
+          }
+          showTimes.push(showTime)
+        })
+
+        movie["Shows"] = showTimes
+        callback( 200, movie )
+      }
+    })
+}
+
+function getMovieInfo(id, callback){
+  // TODO: There could be some more error handling regardin the format of the id
+  if( id !== undefined && id !== "" )
+    var addr = "http://www.finnkino.fi/xml/Events?eventID=" + id
+  else {
+    callback(400, "error")
+  }
+
+  var req = client.get(addr, function (data, response) {
+    parseXml(data, handleMovieInfo)
+
+    function handleMovieInfo(result) {
+      if(result === "error")
+        callback(500, "error")
+
+      getRating( cutString(result.Events.Event.OriginalTitle ), handleResult)
+      function handleResult(movie){
+        getSchedule( id, movie, callback)
+      }
+    }
+  })
+}
+
 // Print timestamp and request url & params for each query.
 router.use(function timeLog (req, res, next) {
   console.log('[', Date.now().toString(), '] Url: ', req.url, "Request params: ", req.params)
@@ -217,54 +265,6 @@ router.get('/rest/movies/date/:date', function (req, res) {
     })
 })
 
-function getSchedule( id, movie, callback ){
-  var req = client.get("http://www.finnkino.fi/xml/Schedule?eventID=" + id
-    , function (data, response) {
-      parseXml(data, handleShows)
-
-      function handleShows(result) {
-        if(result === "error")
-          res.sendStatus(500)
-
-        var shows = result.Schedule.Shows.Show
-        var showTimes = []
-        shows.forEach(function(show) {
-          var showTime = {
-            "Time": show.dttmShowStart,
-            "Place": show.Theatre
-          }
-          showTimes.push(showTime)
-        })
-
-        movie["Shows"] = showTimes
-        callback( 200, movie )
-      }
-    })
-}
-
-function getMovieInfo(id, callback){
-  // TODO: There could be some more error handling regardin the format of the id
-  if( id !== undefined && id !== "" )
-    var addr = "http://www.finnkino.fi/xml/Events?eventID=" + id
-  else {
-    callback(400, "error")
-  }
-
-  var req = client.get(addr, function (data, response) {
-    parseXml(data, handleMovieInfo)
-
-    function handleMovieInfo(result) {
-      if(result === "error")
-        callback(500, "error")
-
-      getRating( cutString(result.Events.Event.OriginalTitle ), handleResult)
-      function handleResult(movie){
-        getSchedule( id, movie, callback)
-      }
-    }
-  })
-}
-
 // Get movie info and show times
 router.get('/rest/movie/info/:id', function (req, res) {
   getMovieInfo( req.params.id, handle )
@@ -287,8 +287,7 @@ router.get('/rest/movie/info/:id', function (req, res) {
 // Get the movie id based on the title
 router.get('/rest/movie/id/:title', function (req, res) {
   var title = req.params.title
-  var arr = []
-  getIdByTitle(title, "NowInTheatres", arr, handleMovies)
+  getIdByTitle(title, "NowInTheatres", [], handleMovies)
 
   // Callback to be used after the first request is ready
   function handleMovies( movies ){
