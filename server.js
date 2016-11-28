@@ -27,9 +27,9 @@ router.get('/rest/theaters', function (req, res) {
 	})
 
 	req.on('error', function (err) {
-		res.sendStatus(500)
+    console.log('request error', err)
+		res.status(500)
 		res.send("Error when connecting to finnkino database.")
-	    console.log('request error', err)
 	})
 })
 
@@ -111,7 +111,7 @@ router.get('/rest/movie/info/:id', function (req, res) {
   })
 })
 
-// Get the movie id based on the title
+// Get the movie id based on the title if found
 router.get('/rest/movie/id/:title', function (req, res) {
   var title = req.params.title
   helpers.getIdByTitle(title, "NowInTheatres", [], handleMovies)
@@ -133,8 +133,8 @@ app.use('/', router)
 
 // Print 404 when unable to find.
 app.use(function(req, res){
+   res.status(404)
    res.send("Not found.")
-   res.sendStatus(404)
 })
 
 var server = app.listen(3000, function () {

@@ -26,6 +26,7 @@ REST API toteutetaan Nodella ja palauttaa vastaukset JSON-formaatissa.
 
 ### /movies/date/:date?theater={theater_id}
   * Format: dd.mm.yyyy
+  * Defaults to today
   * **HTTP Method:** GET
     * **Media types:** application/json
     * **Description:** Palauttaa kaikki elokuvat joita näytetään finnkinon teattereissa annettuna päivänä.
@@ -36,7 +37,7 @@ REST API toteutetaan Nodella ja palauttaa vastaukset JSON-formaatissa.
   * Defaults to NowInTheatres
   * **HTTP Method:** GET
     * **Media types:** application/json
-    * **Description:** Palauttaa teatterissa näkyvät tai sinne tulossa olevat elokuvat ja niiden arvostelut.
+    * **Description:** Palauttaa teatterissa näkyvät tai sinne tulossa olevat elokuvat ja niiden arvostelut. Jos id:tä ei tunnisteta, palautetaan kaikissa teattereissa näkyvät elokuvat.
     * **Status codes:**
       * 200: If successful
 

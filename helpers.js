@@ -62,7 +62,7 @@ function getRating( originalTitle, callback ){
   })
 }
 
-// Sort movies by imdb ratings, and secondarily by Metascore
+// Sort movies by imdb ratings, and secondarily by Metascore, thirdly by tomatoMeter
 function sortRatings( movies, callback ){
   movies.sort(function(a, b) {
     if (a.imdbRating > b.imdbRating) {
@@ -116,8 +116,10 @@ function getSchedule( id, movie, callback ){
         var showTimes = []
         shows.forEach(function(show) {
           var showTime = {
-            "Time": show.dttmShowStart,
-            "Place": show.Theatre
+            "startTime": show.dttmShowStart,
+            "endTime": show.dttmShowEnd,
+            "Place": show.Theatre,
+            "ageRating": show.Rating
           }
           showTimes.push(showTime)
         })
@@ -128,6 +130,7 @@ function getSchedule( id, movie, callback ){
     })
 }
 
+// Parses XML to js by using xml2js.parseString()
 exports.parseXml = function parseXml(xml, callback){
   parseString(xml, {explicitArray: false}, function (err, result) {
     if(err) {
@@ -138,6 +141,7 @@ exports.parseXml = function parseXml(xml, callback){
   })
 }
 
+// Gets the id of movies by given title
 exports.getIdByTitle = function getIdByTitle(title, listType, movies, callback){
   var req = client.get("http://www.finnkino.fi/xml/Events?listType=" + listType
     , function (data, response) {
@@ -153,6 +157,7 @@ exports.getIdByTitle = function getIdByTitle(title, listType, movies, callback){
     })
 }
 
+// Get ratings for movies
 exports.collectRatings = function collectRatings( movies, callback ){
   var result = []
   var maxRequests = movies.length
@@ -172,6 +177,7 @@ exports.collectRatings = function collectRatings( movies, callback ){
   })
 }
 
+// Finds all movies from shows by title
 exports.findMovies = function findMovies(shows, callback){
   var movies = []
   shows.forEach(function(show) {
@@ -181,12 +187,12 @@ exports.findMovies = function findMovies(shows, callback){
   callback(movies)
 }
 
+// Gets the ratings and schedule for movie by id
 exports.getMovieInfo = function getMovieInfo(id, callback){
-  // TODO: There could be some more error handling regardin the format of the id
   if( id !== undefined && id !== "" )
     var addr = "http://www.finnkino.fi/xml/Events?eventID=" + id
   else {
-    callback(400, "error")
+    callback(400, "Error: Id not found!")
   }
 
   var req = client.get(addr, function (data, response) {
@@ -196,9 +202,15 @@ exports.getMovieInfo = function getMovieInfo(id, callback){
       if(result === "error")
         callback(500, "error")
 
-      getRating( result.Events.Event.OriginalTitle, handleResult)
-      function handleResult(movie){
-        getSchedule( id, movie, callback)
+      try {
+        getRating( result.Events.Event.OriginalTitle, handleResult)
+        function handleResult(movie) {
+          getSchedule( id, movie, callback)
+        }
+      }
+
+      catch(err) {
+        callback( 400, "Error: Movie not found!")
       }
     }
   })
