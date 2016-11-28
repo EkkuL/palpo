@@ -17,7 +17,7 @@ function cutString(s){
   return x
 }
 
-// Function for checking if the searched title is found from movie list.
+// Function for checking if the searched title is found from movies
 function checkTitle(title, movies, result, listType, callback){
   movies.forEach(function(movie) {
     if( movie.Title.toLowerCase().includes(title.toLowerCase()) ||
@@ -33,27 +33,36 @@ function checkTitle(title, movies, result, listType, callback){
   callback(result)
 }
 
-function getRating( title, callback ){
-  var addr = 'http://www.omdbapi.com/?t=' + title
+// Get the rating for a movie by title
+function getRating( originalTitle, callback ){
+  var title = cutString(originalTitle)
+  var addr = 'http://www.omdbapi.com/?t=' + title + '&tomatoes=true'
   var req = client.get(addr, function (data, response) {
     if (data.Response === "True") {
       var movie = {
-        "Title": title,
+        "Title": originalTitle,
         "imdbRating": data.imdbRating,
-        "imdbVotes": data.imdbVotes
+        "imdbVotes": data.imdbVotes,
+        "Metascore": data.Metascore,
+        "tomatoMeter": data.tomatoMeter,
+        "tomatoUserMeter": data.tomatoUserMeter
       }
     // Movie is not found in the omdb database
     } else {
       var movie = {
-        "Title": title,
+        "Title": originalTitle,
         "imdbRating": "N/A",
-        "imdbVotes": "N/A"
+        "imdbVotes": "N/A",
+        "Metascore": "N/A",
+        "tomatoMeter": "N/A",
+        "tomatoUserMeter": "N/A"
       }
     }
     callback(movie)
   })
 }
 
+// Sort movies by imdb ratings, and secondarily by Metascore
 function sortRatings( movies, callback ){
   movies.sort(function(a, b) {
     if (a.imdbRating > b.imdbRating) {
@@ -65,12 +74,35 @@ function sortRatings( movies, callback ){
         return -1
       return 1
     } else {
+        if( a.Metascore > b.Metascore ){
+          if (a.Metascore === "N/A")
+            return 1
+          return -1
+        }
+        else if( a.Metascore < b.Metascore ){
+          if (b.Metascore === "N/A")
+            return -1
+          return 1
+        }
+        else {
+          if( a.tomatoMeter > b.tomatoMeter){
+            if( a.tomatoMeter === "N/A")
+              return 1
+            return -1
+          }
+          else if( a.tomatoMeter < b.tomatoMeter){
+            if( b.tomatoMeter === "N/A")
+              return -1
+            return 1
+          }
+        }
       return 0
     }
   })
   callback( movies )
 }
 
+// Get a schedule for movie by id
 function getSchedule( id, movie, callback ){
   var req = client.get("http://www.finnkino.fi/xml/Schedule?eventID=" + id
     , function (data, response) {
@@ -128,7 +160,7 @@ exports.collectRatings = function collectRatings( movies, callback ){
 
   movies.forEach(function(movie) {
     // Removing parenthesis, 3D and 2D from the title before request
-    getRating( cutString(movie.OriginalTitle), add2Results )
+    getRating( movie.OriginalTitle, add2Results )
 
     function add2Results(movie){
       result.push(movie)
@@ -164,7 +196,7 @@ exports.getMovieInfo = function getMovieInfo(id, callback){
       if(result === "error")
         callback(500, "error")
 
-      getRating( cutString(result.Events.Event.OriginalTitle ), handleResult)
+      getRating( result.Events.Event.OriginalTitle, handleResult)
       function handleResult(movie){
         getSchedule( id, movie, callback)
       }
