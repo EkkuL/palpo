@@ -74,8 +74,8 @@ router.get('/rest/movies/date/:date', function (req, res) {
 })
 
 // Get movie info and show times
-router.get('/rest/movie/info/:id', function (req, res) {
-  helpers.getMovieInfo( req.params.id, req.query.theater, handle )
+router.get('/rest/movie', function (req, res) {
+  helpers.getMovieInfo( req.query.id, req.query.title, req.query.theater, handle )
 
   function handle( code, result ){
     if( result === "error" ){
@@ -92,14 +92,15 @@ router.get('/rest/movie/info/:id', function (req, res) {
 	})
 })
 
-// Get the movie id based on the title if found
-router.get('/rest/movie/id/:title', function (req, res) {
+// Get movies based on the title
+router.get('/rest/movies/title/:title', function (req, res) {
   var title = req.params.title
-  helpers.getIdByTitle(title, "NowInTheatres", [], handleMovies)
+	var theater = req.query.theater
+  helpers.getIdByTitle(title, theater, "NowInTheatres", [], handleMovies)
 
   // Callback to be used after the first request is ready
   function handleMovies( movies ){
-    helpers.getIdByTitle(title, "ComingSoon", movies, handleBoth)
+    helpers.getIdByTitle(title, theater, "ComingSoon", movies, handleBoth)
   }
 
   // Callback after both requests are ready

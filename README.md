@@ -44,16 +44,16 @@ REST API toteutetaan Nodella ja palauttaa vastaukset JSON-formaatissa.
       * 200: If successful
       * 500: If there is an error parsing the XML or request error
 
-### /movie/info/:id?theater={theater_id}
+### /movie?id=movie_id&title=movie_title&theater={theater_id}
   * **HTTP Method:** GET
     * **Media types:** application/json
-    * **Description:** Palauttaa id:n perusteella elokuvan tiedot ja arvostelut, sekä näytösajat jos niitä on.
+    * **Description:** Palauttaa elokuvan tiedot ja arvostelut, sekä näytösajat jos niitä on.
     * **Status codes:**
       * 200: If successful
       * 500: If there is an error parsing the XML or request error
       * 400: If id doesn't match any movie or id is not found
 
-### /movie/id/:title
+### /movies/title/:title?theater={theater_id}
   * **HTTP Method:** GET
     * **Media types:** application/json
     * **Description:** Palauttaa kaikki elokuvat nimen ja id:n kanssa, joiden nimessä on annettu :title.
