@@ -99,7 +99,7 @@ router.get('/rest/movies/date/:date', function (req, res) {
 
 // Get movie info and show times
 router.get('/rest/movie/info/:id', function (req, res) {
-  helpers.getMovieInfo( req.params.id, handle )
+  helpers.getMovieInfo( req.params.id, req.query.theater, handle )
 
   function handle( code, result ){
     if( result === "error" ){

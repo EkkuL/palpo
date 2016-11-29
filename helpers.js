@@ -103,8 +103,8 @@ function sortRatings( movies, callback ){
 }
 
 // Get a schedule for movie by id
-function getSchedule( id, movie, callback ){
-  var req = client.get("http://www.finnkino.fi/xml/Schedule?eventID=" + id
+function getSchedule( id, movie, theater, callback ){
+  var req = client.get("http://www.finnkino.fi/xml/Schedule?eventID=" + id + "&area=" + theater
     , function (data, response) {
       exports.parseXml(data, handleShows)
 
@@ -188,7 +188,7 @@ exports.findMovies = function findMovies(shows, callback){
 }
 
 // Gets the ratings and schedule for movie by id
-exports.getMovieInfo = function getMovieInfo(id, callback){
+exports.getMovieInfo = function getMovieInfo(id, theater, callback){
   if( id !== undefined && id !== "" )
     var addr = "http://www.finnkino.fi/xml/Events?eventID=" + id
   else {
@@ -196,6 +196,7 @@ exports.getMovieInfo = function getMovieInfo(id, callback){
   }
 
   var req = client.get(addr, function (data, response) {
+    console.log(req.options);
     exports.parseXml(data, handleMovieInfo)
 
     function handleMovieInfo(result) {
@@ -205,7 +206,7 @@ exports.getMovieInfo = function getMovieInfo(id, callback){
       try {
         getRating( result.Events.Event.OriginalTitle, handleResult)
         function handleResult(movie) {
-          getSchedule( id, movie, callback)
+          getSchedule( id, movie, theater, callback)
         }
       }
 
