@@ -134,7 +134,7 @@ function getSchedule( id, movie, callback ){
 exports.parseXml = function parseXml(xml, callback){
   parseString(xml, {explicitArray: false}, function (err, result) {
     if(err) {
-      console.log(err)
+      console.error(err)
       return "error"
     }
     callback(result)

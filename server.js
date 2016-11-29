@@ -10,6 +10,12 @@ var util = require('util')
 var Client = require('node-rest-client').Client
 var client = new Client()
 
+// Print timestamp and request url & params for each query.
+router.use(function timeLog (req, res, next) {
+	console.log('[', Date.now().toString(), '] Url: ', req.url, "Request params: ", req.params)
+	next()
+})
+
 // TODO: Handle errors.
 // List all theaters
 router.get('/rest/theaters', function (req, res) {
@@ -27,7 +33,7 @@ router.get('/rest/theaters', function (req, res) {
 	})
 
 	req.on('error', function (err) {
-    console.log('request error', err)
+    console.error(err)
 		res.status(500)
 		res.send("Error when connecting to finnkino database.")
 	})
@@ -58,8 +64,8 @@ router.get('/rest/movies/theater/:id', function (req, res) {
 	})
 
 	req.on('error', function (err) {
+		console.error(err)
 		res.sendStatus(500)
-	    console.log('request error', err)
 	})
 })
 
@@ -70,7 +76,6 @@ router.get('/rest/movies/date/:date', function (req, res) {
 
 	var req = client.get("http://www.finnkino.fi/xml/Schedule?dt=" + date + "&area=" + theater
 		, function (data, response) {
-      console.log(req.options);
       helpers.parseXml(data, handleMovies)
 
       function handleMovies(result) {
@@ -87,8 +92,8 @@ router.get('/rest/movies/date/:date', function (req, res) {
     })
 
     req.on('error', function (err) {
+			console.error(err)
   		res.sendStatus(500)
-  	    console.log('request error', err)
     })
 })
 
@@ -99,15 +104,15 @@ router.get('/rest/movie/info/:id', function (req, res) {
   function handle( code, result ){
     if( result === "error" ){
       res.sendStatus(code)
-      console.log("Movie not found!")
+      console.error("Movie not found!")
     }
     res.status(code)
     res.json(result)
   }
 
   req.on('error', function (err) {
+		console.error(err)
 		res.sendStatus(500)
-    console.log('request error', err)
   })
 })
 
@@ -126,6 +131,11 @@ router.get('/rest/movie/id/:title', function (req, res) {
     res.status(200)
     res.json(movies)
   }
+
+	req.on('error', function (err) {
+		console.error(err)
+		res.sendStatus(500)
+  })
 })
 
 // Mount the router on the app
