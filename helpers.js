@@ -34,13 +34,13 @@ function checkTitle(title, movies, result, listType, callback){
 }
 
 // Get the rating for a movie by title
-function getRating( originalTitle, callback ){
-  var title = cutString(originalTitle)
+function getRating( movie, callback ){
+  var title = cutString(movie.originalTitle)
   var addr = 'http://www.omdbapi.com/?t=' + title + '&tomatoes=true'
   var req = client.get(addr, function (data, response) {
     if (data.Response === "True") {
-      var movie = {
-        "Title": originalTitle,
+      var mov = {
+        "Title": movie.Title,
         "imdbRating": data.imdbRating,
         "imdbVotes": data.imdbVotes,
         "Metascore": data.Metascore,
@@ -49,8 +49,8 @@ function getRating( originalTitle, callback ){
       }
     // Movie is not found in the omdb database
     } else {
-      var movie = {
-        "Title": originalTitle,
+      var mov = {
+        "Title": movie.Title,
         "imdbRating": "N/A",
         "imdbVotes": "N/A",
         "Metascore": "N/A",
@@ -58,7 +58,7 @@ function getRating( originalTitle, callback ){
         "tomatoUserMeter": "N/A"
       }
     }
-    callback(movie)
+    callback(mov)
   })
 }
 
@@ -102,6 +102,31 @@ function sortRatings( movies, callback ){
   callback( movies )
 }
 
+// Get Show times and places for a movie from a show list
+function getShowInfo(shows, callback) {
+  var result = []
+  if( Array.isArray(shows) ){
+    shows.forEach(function(show) {
+      var showTime = {
+        "startTime": show.dttmShowStart,
+        "endTime": show.dttmShowEnd,
+        "Place": show.Theatre,
+        "ageRating": show.Rating
+      }
+      result.push(showTime)
+    })
+  } else {
+    var showTime = {
+      "startTime": shows.dttmShowStart,
+      "endTime": shows.dttmShowEnd,
+      "Place": shows.Theatre,
+      "ageRating": shows.Rating
+    }
+    result.push(showTime)
+  }
+  callback(result)
+}
+
 // Get a schedule for movie by id
 function getSchedule( id, movie, theater, callback ){
   var req = client.get("http://www.finnkino.fi/xml/Schedule?eventID=" + id + "&area=" + theater
@@ -112,23 +137,17 @@ function getSchedule( id, movie, theater, callback ){
         if(result === "error")
           res.sendStatus(500)
 
-        movie["Shows"] = []
-
         try {
-          var shows = result.Schedule.Shows.Show
-          shows.forEach(function(show) {
-            var showTime = {
-              "startTime": show.dttmShowStart,
-              "endTime": show.dttmShowEnd,
-              "Place": show.Theatre,
-              "ageRating": show.Rating
-            }
-            movie["Shows"].push(showTime)
-          })
-          callback( 200, movie )
+          getShowInfo( result.Schedule.Shows.Show, handleShowInfo )
+
+          function handleShowInfo( shows ){
+            movie["Shows"] = shows
+            callback( 200, movie )
+          }
         }
         catch(err) {
           console.error(err)
+          movie["Shows"] = []
           callback( 200, movie )
         }
       }
@@ -149,31 +168,52 @@ function parseXml(xml, callback){
 // Get ratings for movies
 function collectRatings( movies, callback ){
   var result = []
-  var maxRequests = movies.length
-  var reqCount = 0
 
-  movies.forEach(function(movie) {
-    // Removing parenthesis, 3D and 2D from the title before request
-    getRating( movie.OriginalTitle, add2Results )
+  if(Array.isArray(movies)) {
+    var maxRequests = movies.length
+    var reqCount = 0
 
-    function add2Results(movie){
-      result.push(movie)
-      reqCount ++
-      //All movie requests have been received
-      if (reqCount === maxRequests)
-        sortRatings( result, callback )
+    movies.forEach(function(movie) {
+      var titles = {
+        "Title": movie.Title,
+        "originalTitle": movie.OriginalTitle
+      }
+      getRating( titles, add2Results )
+
+      function add2Results(movie){
+        result.push(movie)
+        reqCount ++
+        //All movie requests have been received
+        if (reqCount === maxRequests)
+          sortRatings( result, callback )
+      }
+    })
+  } else {
+    var titles = {
+      "Title": movies.Title,
+      "originalTitle": movies.OriginalTitle
     }
-  })
+    getRating( titles, handleMovie )
+
+    function handleMovie( movie ){
+      result.push( movie )
+      callback( result )
+    }
+  }
 }
 
 // Gets all events from shows
 function findMovies(shows, callback){
   var movies = []
-  shows.forEach(function(show) {
-    if( !movies.includes(show.Title) )
-      movies.push(show.Title)
-  })
-  callback(movies)
+  if( Array.isArray(shows) ){
+    shows.forEach(function(show) {
+      if( !movies.includes(show.Title) )
+        movies.push(show.Title)
+    })
+  } else {
+    movies.push(shows.Title)
+  }
+  callback( movies )
 }
 
 // Gets the id of movies by given title
@@ -208,7 +248,11 @@ exports.getMovieInfo = function getMovieInfo(id, theater, callback){
         callback(500, "error")
 
       try {
-        getRating( result.Events.Event.OriginalTitle, handleResult)
+        var titles = {
+          "Title": result.Events.Event.Title,
+          "originalTitle": result.Events.Event.OriginalTitle
+        }
+        getRating( titles, handleResult)
         function handleResult(movie) {
           getSchedule( id, movie, theater, callback)
         }
@@ -222,6 +266,7 @@ exports.getMovieInfo = function getMovieInfo(id, theater, callback){
   })
 }
 
+// Get list of all theaters
 exports.getTheaters = function getTheaters(callback){
   var req = client.get("http://www.finnkino.fi/xml/TheatreAreas", function (data, response) {
       parseXml(data, sendTheaters)
@@ -235,53 +280,54 @@ exports.getTheaters = function getTheaters(callback){
 	})
 }
 
+// Get list of movies running on a theater based on id.
 exports.getEvents = function getEvents(listType, theater, callback){
   var req = client.get("http://www.finnkino.fi/xml/Events?listType=" + listType + "&area=" + theater
-  		, function (data, response) {
-        parseXml(data, getMovies)
+		, function (data, response) {
+      parseXml(data, getMovies)
 
-        function getMovies(result) {
-          if(result === "error")
-            callback( 500, error )
+      function getMovies(result) {
+        if(result === "error")
+          callback( 500, error )
 
-  				try {
-  	        collectRatings( result.Events.Event, handleResults )
+				try {
+	        collectRatings( result.Events.Event, handleResults )
 
-  	        function handleResults( movies ){
-              callback( 200, movies )
-  	        }
-  				}
-  				// No movies found
-  				catch(err) {
-            console.error(err)
-  					callback( 200, [] )
+	        function handleResults( movies ){
+            callback( 200, movies )
+	        }
+				}
+				// No movies found
+				catch(err) {
+          console.error(err)
+					callback( 200, [] )
         }
       }
 	})
 }
 
+// Get list of movies showing on a given date and area
 exports.getMoviesFromSchedule = function getMoviesFromSchedule(date, theater, callback){
   var req = client.get("http://www.finnkino.fi/xml/Schedule?dt=" + date + "&area=" + theater
-  		, function (data, response) {
-        console.log(req.options);
-        parseXml(data, handleMovies)
+		, function (data, response) {
+      parseXml(data, handleMovies)
 
-        function handleMovies(result) {
-          if(result === "error")
-            callback( 500, error )
+      function handleMovies(result) {
+        if(result === "error")
+          callback( 500, error )
 
-  				try {
-  	        findMovies(result.Schedule.Shows.Show, handleResult)
+				try {
+	        findMovies(result.Schedule.Shows.Show, handleResult)
 
-  	        function handleResult(result){
-  	          callback( 200, result )
-  	        }
-  				}
-  				// No movies found
-  				catch(err) {
-            console.error(err)
-  					callback( 200, [] )
-  				}
-        }
-      })
+	        function handleResult(result){
+	          callback( 200, result )
+	        }
+				}
+				// No movies found
+				catch(err) {
+          console.error(err)
+					callback( 200, [] )
+				}
+      }
+  })
 }
