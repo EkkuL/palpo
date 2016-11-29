@@ -54,18 +54,26 @@ router.get('/rest/movies/theater/:id', function (req, res) {
         if(result === "error")
           res.sendStatus(500)
 
-        helpers.collectRatings( result.Events.Event, handleResults )
+				try {
+	        helpers.collectRatings( result.Events.Event, handleResults )
 
-        function handleResults( movies ){
-          res.status(200)
-          res.json(movies)
-        }
+	        function handleResults( movies ){
+	          res.status(200)
+	          res.json(movies)
+	        }
+				}
+				// No movies found
+				catch(err) {
+					res.status(200)
+					res.json( [] )
+				}
       }
 	})
 
 	req.on('error', function (err) {
-		console.error(err)
-		res.sendStatus(500)
+    console.error(err)
+		res.status(500)
+		res.send("Error when connecting to finnkino database.")
 	})
 })
 
@@ -82,19 +90,27 @@ router.get('/rest/movies/date/:date', function (req, res) {
         if(result === "error")
           res.sendStatus(500)
 
-        helpers.findMovies(result.Schedule.Shows.Show, handleResult)
+				try {
+	        helpers.findMovies(result.Schedule.Shows.Show, handleResult)
 
-        function handleResult(result){
-          res.status(200)
-          res.json(result)
-        }
+	        function handleResult(result){
+	          res.status(200)
+	          res.json(result)
+	        }
+				}
+				// No movies found
+				catch(err) {
+					res.status(200)
+					res.json( [] )
+				}
       }
     })
 
-    req.on('error', function (err) {
-			console.error(err)
-  		res.sendStatus(500)
-    })
+		req.on('error', function (err) {
+	    console.error(err)
+			res.status(500)
+			res.send("Error when connecting to finnkino database.")
+		})
 })
 
 // Get movie info and show times
@@ -103,17 +119,18 @@ router.get('/rest/movie/info/:id', function (req, res) {
 
   function handle( code, result ){
     if( result === "error" ){
+			console.error("Movie not found!")
       res.sendStatus(code)
-      console.error("Movie not found!")
     }
     res.status(code)
     res.json(result)
   }
 
-  req.on('error', function (err) {
-		console.error(err)
-		res.sendStatus(500)
-  })
+	req.on('error', function (err) {
+    console.error(err)
+		res.status(500)
+		res.send("Error when connecting to finnkino database.")
+	})
 })
 
 // Get the movie id based on the title if found
@@ -133,9 +150,10 @@ router.get('/rest/movie/id/:title', function (req, res) {
   }
 
 	req.on('error', function (err) {
-		console.error(err)
-		res.sendStatus(500)
-  })
+    console.error(err)
+		res.status(500)
+		res.send("Error when connecting to finnkino database.")
+	})
 })
 
 // Mount the router on the app

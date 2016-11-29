@@ -23,7 +23,8 @@ REST API toteutetaan Nodella ja palauttaa vastaukset JSON-formaatissa.
     * **Description:** Palauttaa listan eri teatterivaihtoehdoista ja näiden ID:t
     * **Status codes:**
       * 200: If successful
-      * 500: If there is an error parsing the XML or request error
+      * 500: If there is an error parsing the XML or error connecting to finnkino
+      database
 
 ### /movies/date/:date?theater={theater_id}
   * Format: dd.mm.yyyy, defaults tot today
@@ -33,7 +34,8 @@ REST API toteutetaan Nodella ja palauttaa vastaukset JSON-formaatissa.
     * **Description:** Palauttaa kaikki elokuvat joita näytetään finnkinon teattereissa annettuna päivänä.
     * **Status codes:**
       * 200: If successful
-      * 500: If there is an error parsing the XML or request error
+      * 500: If there is an error parsing the XML or error connecting to finnkino
+      database
 
 ### /movies/theater/:id?listType={NowInTheatres|ComingSoon}
   * Defaults to NowInTheatres
@@ -42,7 +44,8 @@ REST API toteutetaan Nodella ja palauttaa vastaukset JSON-formaatissa.
     * **Description:** Palauttaa teatterissa näkyvät tai sinne tulossa olevat elokuvat ja niiden arvostelut. Jos id:tä ei tunnisteta, palautetaan kaikissa teattereissa näkyvät elokuvat.
     * **Status codes:**
       * 200: If successful
-      * 500: If there is an error parsing the XML or request error
+      * 500: If there is an error parsing the XML or error connecting to finnkino
+      database
 
 ### /movie/info/:id?theater={theater_id}
   * **HTTP Method:** GET
@@ -50,7 +53,8 @@ REST API toteutetaan Nodella ja palauttaa vastaukset JSON-formaatissa.
     * **Description:** Palauttaa id:n perusteella elokuvan tiedot ja arvostelut, sekä näytösajat jos niitä on.
     * **Status codes:**
       * 200: If successful
-      * 500: If there is an error parsing the XML or request error
+      * 500: If there is an error parsing the XML or error connecting to finnkino
+      database
       * 400: If id doesn't match any movie or id is not found
 
 ### /movie/id/:title
@@ -59,4 +63,5 @@ REST API toteutetaan Nodella ja palauttaa vastaukset JSON-formaatissa.
     * **Description:** Palauttaa kaikki elokuvat nimen ja id:n kanssa, joiden nimessä on annettu :title.
     * **Status codes:**
       * 200: If successful
-      * 500: If there is an error parsing the XML or request error
+      * 500: If there is an error parsing the XML or error connecting to finnkino
+      database

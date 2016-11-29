@@ -112,20 +112,24 @@ function getSchedule( id, movie, theater, callback ){
         if(result === "error")
           res.sendStatus(500)
 
-        var shows = result.Schedule.Shows.Show
-        var showTimes = []
-        shows.forEach(function(show) {
-          var showTime = {
-            "startTime": show.dttmShowStart,
-            "endTime": show.dttmShowEnd,
-            "Place": show.Theatre,
-            "ageRating": show.Rating
-          }
-          showTimes.push(showTime)
-        })
+        movie["Shows"] = []
 
-        movie["Shows"] = showTimes
-        callback( 200, movie )
+        try {
+          var shows = result.Schedule.Shows.Show
+          shows.forEach(function(show) {
+            var showTime = {
+              "startTime": show.dttmShowStart,
+              "endTime": show.dttmShowEnd,
+              "Place": show.Theatre,
+              "ageRating": show.Rating
+            }
+            movie["Shows"].push(showTime)
+          })
+          callback( 200, movie )
+        }
+        catch(err) {
+          callback( 200, movie )
+        }
       }
     })
 }
@@ -146,7 +150,7 @@ exports.getIdByTitle = function getIdByTitle(title, listType, movies, callback){
   var req = client.get("http://www.finnkino.fi/xml/Events?listType=" + listType
     , function (data, response) {
 
-      parseXml(data, searchMovies)
+      exports.parseXml(data, searchMovies)
 
       function searchMovies(result) {
         if(result === "error")
@@ -196,7 +200,6 @@ exports.getMovieInfo = function getMovieInfo(id, theater, callback){
   }
 
   var req = client.get(addr, function (data, response) {
-    console.log(req.options);
     exports.parseXml(data, handleMovieInfo)
 
     function handleMovieInfo(result) {
