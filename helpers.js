@@ -106,7 +106,7 @@ function sortRatings( movies, callback ){
 function getSchedule( id, movie, theater, callback ){
   var req = client.get("http://www.finnkino.fi/xml/Schedule?eventID=" + id + "&area=" + theater
     , function (data, response) {
-      exports.parseXml(data, handleShows)
+      parseXml(data, handleShows)
 
       function handleShows(result) {
         if(result === "error")
@@ -128,6 +128,7 @@ function getSchedule( id, movie, theater, callback ){
           callback( 200, movie )
         }
         catch(err) {
+          console.error(err)
           callback( 200, movie )
         }
       }
@@ -135,7 +136,7 @@ function getSchedule( id, movie, theater, callback ){
 }
 
 // Parses XML to js by using xml2js.parseString()
-exports.parseXml = function parseXml(xml, callback){
+function parseXml(xml, callback){
   parseString(xml, {explicitArray: false}, function (err, result) {
     if(err) {
       console.error(err)
@@ -145,24 +146,8 @@ exports.parseXml = function parseXml(xml, callback){
   })
 }
 
-// Gets the id of movies by given title
-exports.getIdByTitle = function getIdByTitle(title, listType, movies, callback){
-  var req = client.get("http://www.finnkino.fi/xml/Events?listType=" + listType
-    , function (data, response) {
-
-      exports.parseXml(data, searchMovies)
-
-      function searchMovies(result) {
-        if(result === "error")
-          res.sendStatus(500)
-
-        checkTitle(title, result.Events.Event, movies, listType, callback )
-      }
-    })
-}
-
 // Get ratings for movies
-exports.collectRatings = function collectRatings( movies, callback ){
+function collectRatings( movies, callback ){
   var result = []
   var maxRequests = movies.length
   var reqCount = 0
@@ -181,14 +166,30 @@ exports.collectRatings = function collectRatings( movies, callback ){
   })
 }
 
-// Finds all movies from shows by title
-exports.findMovies = function findMovies(shows, callback){
+// Gets all events from shows
+function findMovies(shows, callback){
   var movies = []
   shows.forEach(function(show) {
     if( !movies.includes(show.Title) )
       movies.push(show.Title)
   })
   callback(movies)
+}
+
+// Gets the id of movies by given title
+exports.getIdByTitle = function getIdByTitle(title, listType, movies, callback){
+  var req = client.get("http://www.finnkino.fi/xml/Events?listType=" + listType
+    , function (data, response) {
+
+      parseXml(data, searchMovies)
+
+      function searchMovies(result) {
+        if(result === "error")
+          res.sendStatus(500)
+
+        checkTitle(title, result.Events.Event, movies, listType, callback )
+      }
+    })
 }
 
 // Gets the ratings and schedule for movie by id
@@ -200,7 +201,7 @@ exports.getMovieInfo = function getMovieInfo(id, theater, callback){
   }
 
   var req = client.get(addr, function (data, response) {
-    exports.parseXml(data, handleMovieInfo)
+    parseXml(data, handleMovieInfo)
 
     function handleMovieInfo(result) {
       if(result === "error")
@@ -214,8 +215,73 @@ exports.getMovieInfo = function getMovieInfo(id, theater, callback){
       }
 
       catch(err) {
+        console.error(err)
         callback( 400, "Error: Movie not found!")
       }
     }
   })
+}
+
+exports.getTheaters = function getTheaters(callback){
+  var req = client.get("http://www.finnkino.fi/xml/TheatreAreas", function (data, response) {
+      parseXml(data, sendTheaters)
+
+      function sendTheaters(result) {
+        if(result === "error")
+          callback( 500, error )
+
+        callback( 200, result.TheatreAreas.TheatreArea )
+      }
+	})
+}
+
+exports.getEvents = function getEvents(listType, theater, callback){
+  var req = client.get("http://www.finnkino.fi/xml/Events?listType=" + listType + "&area=" + theater
+  		, function (data, response) {
+        parseXml(data, getMovies)
+
+        function getMovies(result) {
+          if(result === "error")
+            callback( 500, error )
+
+  				try {
+  	        collectRatings( result.Events.Event, handleResults )
+
+  	        function handleResults( movies ){
+              callback( 200, movies )
+  	        }
+  				}
+  				// No movies found
+  				catch(err) {
+            console.error(err)
+  					callback( 200, [] )
+        }
+      }
+	})
+}
+
+exports.getMoviesFromSchedule = function getMoviesFromSchedule(date, theater, callback){
+  var req = client.get("http://www.finnkino.fi/xml/Schedule?dt=" + date + "&area=" + theater
+  		, function (data, response) {
+        console.log(req.options);
+        parseXml(data, handleMovies)
+
+        function handleMovies(result) {
+          if(result === "error")
+            callback( 500, error )
+
+  				try {
+  	        findMovies(result.Schedule.Shows.Show, handleResult)
+
+  	        function handleResult(result){
+  	          callback( 200, result )
+  	        }
+  				}
+  				// No movies found
+  				catch(err) {
+            console.error(err)
+  					callback( 200, [] )
+  				}
+        }
+      })
 }

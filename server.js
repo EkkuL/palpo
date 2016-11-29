@@ -6,10 +6,6 @@ var router = express.Router()
 
 var util = require('util')
 
-// Client for fetching data from public APIS
-var Client = require('node-rest-client').Client
-var client = new Client()
-
 // Print timestamp and request url & params for each query.
 router.use(function timeLog (req, res, next) {
 	console.log('[', Date.now().toString(), '] Url: ', req.url, "Request params: ", req.params)
@@ -19,18 +15,15 @@ router.use(function timeLog (req, res, next) {
 // TODO: Handle errors.
 // List all theaters
 router.get('/rest/theaters', function (req, res) {
-	var req = client.get("http://www.finnkino.fi/xml/TheatreAreas", function (data, response) {
+	helpers.getTheaters( handleTheaters )
 
-      helpers.parseXml(data, sendTheaters)
+	function handleTheaters( code, result ){
+		if( result === "error" )
+			res.sendStatus(code)
 
-      function sendTheaters(result) {
-        if(result === "error")
-          res.sendStatus(500)
-
-        res.status(200)
-  	    res.json(result.TheatreAreas.TheatreArea)
-      }
-	})
+		res.status(code)
+		res.json(result)
+	}
 
 	req.on('error', function (err) {
     console.error(err)
@@ -46,70 +39,37 @@ router.get('/rest/movies/theater/:id', function (req, res) {
   var listType = "NowInTheatres"
   listType = req.query.listType
 
-	var req = client.get("http://www.finnkino.fi/xml/Events?listType=" + listType + "&area=" + req.params.id
-		, function (data, response) {
-      helpers.parseXml(data, getMovies)
+	helpers.getEvents( listType, req.params.id, handleEvents )
 
-      function getMovies(result) {
-        if(result === "error")
-          res.sendStatus(500)
+	function handleEvents( code, result ){
+		if( result === "error" )
+			res.sendStatus(code)
 
-				try {
-	        helpers.collectRatings( result.Events.Event, handleResults )
-
-	        function handleResults( movies ){
-	          res.status(200)
-	          res.json(movies)
-	        }
-				}
-				// No movies found
-				catch(err) {
-					res.status(200)
-					res.json( [] )
-				}
-      }
-	})
+		res.status(code)
+		res.json(result)
+	}
 
 	req.on('error', function (err) {
     console.error(err)
-		res.status(500)
-		res.send("Error when connecting to finnkino database.")
+		res.sendStatus(500)
 	})
 })
 
 // Get list of movies showing on a given date and area
 router.get('/rest/movies/date/:date', function (req, res) {
-  var date = req.params.date
-  var theater = req.query.theater
+	helpers.getMoviesFromSchedule( req.params.date, req.query.theater, handleResult )
 
-	var req = client.get("http://www.finnkino.fi/xml/Schedule?dt=" + date + "&area=" + theater
-		, function (data, response) {
-      helpers.parseXml(data, handleMovies)
+	function handleResult( code, result ){
+		if( result === "error" )
+			res.sendStatus(code)
 
-      function handleMovies(result) {
-        if(result === "error")
-          res.sendStatus(500)
-
-				try {
-	        helpers.findMovies(result.Schedule.Shows.Show, handleResult)
-
-	        function handleResult(result){
-	          res.status(200)
-	          res.json(result)
-	        }
-				}
-				// No movies found
-				catch(err) {
-					res.status(200)
-					res.json( [] )
-				}
-      }
-    })
+		res.status(code)
+		res.json(result)
+	}
 
 		req.on('error', function (err) {
-	    console.error(err)
-			res.status(500)
-			res.send("Error when connecting to finnkino database.")
+			console.error(err)
+			res.sendStatus(500)
 		})
 })
 
@@ -127,9 +87,8 @@ router.get('/rest/movie/info/:id', function (req, res) {
   }
 
 	req.on('error', function (err) {
-    console.error(err)
-		res.status(500)
-		res.send("Error when connecting to finnkino database.")
+		console.error(err)
+		res.sendStatus(500)
 	})
 })
 
@@ -150,9 +109,8 @@ router.get('/rest/movie/id/:title', function (req, res) {
   }
 
 	req.on('error', function (err) {
-    console.error(err)
-		res.status(500)
-		res.send("Error when connecting to finnkino database.")
+		console.error(err)
+		res.sendStatus(500)
 	})
 })
 
