@@ -18,7 +18,8 @@ function cutString(s){
 }
 
 // Function for checking if the searched title is found from movies
-function checkTitle(title, movies, result, listType, callback){
+function checkTitle(title, movies, callback){
+  var result = []
   movies.forEach(function(movie) {
     if( movie.Title.toLowerCase().includes(title.toLowerCase()) ||
         movie.OriginalTitle.toLowerCase().includes(title.toLowerCase()) ) {
@@ -30,7 +31,6 @@ function checkTitle(title, movies, result, listType, callback){
           result.push(mov)
     }
   })
-  //collectRatings(result, callback)
   callback(result)
 }
 
@@ -178,6 +178,11 @@ function collectRatings( movies, callback ){
     var maxRequests = movies.length
     var reqCount = 0
 
+    if( maxRequests === 0 ){
+      callback( [] )
+      return
+    }
+
     movies.forEach(function(movie) {
       var titles = {
         "ID": movie.ID,
@@ -233,9 +238,9 @@ function getShowsTimes(shows, callback){
   //collectRatings( result, callback )
 }
 
-// Gets the id of movies by given title
-function getIdByTitle(title, theater, movies, listType, callback){
-  var addr = "http://www.finnkino.fi/xml/Events?listType=" + listType + "&area=" + theater
+// Get all coming finnkino events
+function getComingEvents(callback){
+  var addr = "http://www.finnkino.fi/xml/Events?listType=" + "ComingSoon"
   var req = client.get(addr, function (data, response) {
     parseXml(data, searchMovies)
 
@@ -243,9 +248,41 @@ function getIdByTitle(title, theater, movies, listType, callback){
       if(result === "error")
         res.sendStatus(500)
 
-      checkTitle(title, result.Events.Event, movies, listType, callback )
+      callback(result.Events.Event)
     }
   })
+}
+
+// Get all current finnkino events
+function getCurrentEvents(callback){
+  var addr = "http://www.finnkino.fi/xml/Events"
+  var req = client.get(addr, function (data, response) {
+    parseXml(data, searchMovies)
+
+    function searchMovies(result) {
+      if(result === "error")
+        res.sendStatus(500)
+
+      callback(result.Events.Event)
+    }
+  })
+}
+
+// Get all finnkino events
+function getAllEvents(callback){
+  getCurrentEvents(handleCurrent)
+  var events = []
+
+  function handleCurrent( result ){
+    events = result
+    getComingEvents(handleEvents)
+
+    function handleEvents( result ){
+      var final = events.concat(result)
+      // TODO: remove duplicates
+      callback(final)
+    }
+  }
 }
 
 function findMovie( title, movies, ifFound ){
@@ -288,27 +325,8 @@ function searchMovie(title, listType, callback) {
 	})
 }
 
-function getMovieByTitle(title, theater, callback){
-
-}
-
-// Gets the ratings and schedule for movie by id
-exports.getMovieInfo = function getMovieInfo(id, title, theater, callback){
-  if( id !== undefined && id !== "" )
-    var addr = "http://www.finnkino.fi/xml/Events?eventID=" + id
-  else if( title !== undefined && title !== "" ){
-    //TODO
-    /*exports.getEvents()
-    if( title ==! "" && title.toLowerCase() === movie.Title.toLowerCase()){
-      getRating( titles, handleMovie )
-    }*/
-    return
-  }
-  else {
-    callback(400, "Error: Neither id nor title found!")
-    return
-  }
-
+function getInfoById(id, theater, callback){
+  var addr = "http://www.finnkino.fi/xml/Events?eventID=" + id
   var req = client.get(addr, function (data, response) {
     parseXml(data, handleMovieInfo)
 
@@ -334,6 +352,42 @@ exports.getMovieInfo = function getMovieInfo(id, title, theater, callback){
       }
     }
   })
+}
+
+function getIdByTitle(title, callback){
+  var addr = "http://www.finnkino.fi/xml/Events?listType=" + listType
+  var req = client.get(addr, function (data, response) {
+    parseXml(data, searchMovies)
+
+    function searchMovies(result) {
+      if(result === "error")
+        res.sendStatus(500)
+
+      checkTitle(title, result.Events.Event, callback )
+    }
+  })
+}
+
+// Gets the ratings and schedule for movie by id
+exports.getMovieInfo = function getMovieInfo(id, title, theater, callback){
+  if( id !== undefined && id !== "" )
+    getInfoById(id, theater, handleResult)
+  else if( title !== undefined && title !== "" ){
+    //TODO
+    /*exports.getEvents()
+    if( title ==! "" && title.toLowerCase() === movie.Title.toLowerCase()){
+      getRating( titles, handleMovie )
+    }*/
+    return
+  }
+  else {
+    callback(400, "Error: Neither id nor title found!")
+    return
+  }
+
+  function handleResult( code, result ){
+    callback( code, result )
+  }
 }
 
 // Get list of all theaters
@@ -402,20 +456,22 @@ exports.getShows = function getShows(date, theater, callback){
   })
 }
 
-exports.getTitles = function getTitles(title, theater, callback){
-  getIdByTitle(title, theater, [], "NowInTheatres", handleMovies)
+function getMoviesFromEvents(title, movies, callback){
 
-  // Callback to be used after the first request is ready
-  function handleMovies( movies ){
-    getIdByTitle(title, theater, movies, "ComingSoon", handleBoth)
+}
+
+exports.getTitles = function getTitles(title, theater, callback){
+  getAllEvents( handleEvents )
+
+  function handleEvents( result ){
+    checkTitle( title, result, handleMovies )
   }
 
-  // Callback after both requests are ready
-  function handleBoth( movies ){
-		collectRatings(movies, handleResults)
+  function handleMovies( result ){
+    collectRatings(result, handleResults )
+  }
 
-    function handleResults(result){
-      callback( 200, result )
-    }
+  function handleResults( result ){
+    callback( 200, result )
   }
 }
