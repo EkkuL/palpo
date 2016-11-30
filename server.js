@@ -80,6 +80,7 @@ router.get('/rest/movie', function (req, res) {
 			console.error("Movie not found!")
       res.sendStatus(code)
     }
+
     res.status(code)
     res.json(result)
   }
@@ -91,6 +92,7 @@ router.get('/rest/movie', function (req, res) {
 })
 
 // Get list of movies showing on a given date and area
+// TODO: Decide whether to include ratings also
 router.get('/rest/shows', function (req, res) {
 	helpers.getShows( req.query.date, req.query.theater, handleResult )
 

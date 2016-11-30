@@ -34,6 +34,25 @@ function checkTitle(title, movies, callback){
   callback(result)
 }
 
+// Function for finding matchin movie for title
+function matchTitle(title, movies, callback){
+  var found = false
+  movies.forEach(function(movie) {
+    if( movie.Title.toLowerCase() === title.toLowerCase() ||
+        movie.OriginalTitle.toLowerCase() === title.toLowerCase() ) {
+          found = true
+          var mov = {
+            "ID" : movie.ID,
+            "Title" : movie.Title,
+            "OriginalTitle": movie.OriginalTitle
+          }
+          callback(mov)
+    }
+  })
+  if( !found )
+    callback("Not found")
+}
+
 // Get the rating for a movie by title
 function getRating( movie, callback ){
   var title = cutString(movie.OriginalTitle)
@@ -178,27 +197,26 @@ function collectRatings( movies, callback ){
     var maxRequests = movies.length
     var reqCount = 0
 
-    if( maxRequests === 0 ){
+    if( maxRequests === 0 )
       callback( [] )
-      return
+    else {
+      movies.forEach(function(movie) {
+        var titles = {
+          "ID": movie.ID,
+          "Title": movie.Title,
+          "OriginalTitle": movie.OriginalTitle
+        }
+        getRating( titles, add2Results )
+
+        function add2Results(movie){
+          result.push(movie)
+          reqCount ++
+          //All movie requests have been received
+          if (reqCount === maxRequests)
+            sortRatings( result, callback )
+        }
+      })
     }
-
-    movies.forEach(function(movie) {
-      var titles = {
-        "ID": movie.ID,
-        "Title": movie.Title,
-        "OriginalTitle": movie.OriginalTitle
-      }
-      getRating( titles, add2Results )
-
-      function add2Results(movie){
-        result.push(movie)
-        reqCount ++
-        //All movie requests have been received
-        if (reqCount === maxRequests)
-          sortRatings( result, callback )
-      }
-    })
   } else {
     var titles = {
       "ID": movies.ID,
@@ -215,7 +233,7 @@ function collectRatings( movies, callback ){
 }
 
 // Gets all events from shows
-function getShowsTimes(shows, callback){
+function getShowTimes(shows, callback){
   var result = []
 
   if( Array.isArray(shows) ){
@@ -235,7 +253,6 @@ function getShowsTimes(shows, callback){
     result.push(shows.Title)
   }
   callback( result )
-  //collectRatings( result, callback )
 }
 
 // Get all coming finnkino events
@@ -285,47 +302,7 @@ function getAllEvents(callback){
   }
 }
 
-function findMovie( title, movies, ifFound ){
-  movies.forEach(function (movie) {
-    if( title.toLowerCase() === movie.Title.toLowerCase() ){
-      var titles = {
-        "ID": movie.ID,
-        "Title": movie.Title,
-        "OriginalTitle": movie.OriginalTitle
-      }
-      getRating( titles, ifFound )
-      return
-    }
-  })
-  notFound()
-}
-
-function searchMovie(title, listType, callback) {
-  var addr = "http://www.finnkino.fi/xml/Events?listType=" + listType
-  var req = client.get(addr, function (data, response) {
-    parseXml(data, getMovie)
-
-    function getMovie(result) {
-      if(result === "error")
-        callback( 500, error )
-
-			try {
-        findMovie( result.Events.Event, callback )
-
-        function handleResults( movies ){
-          callback( 200, movies )
-        }
-			}
-			// No movies found
-			catch(err) {
-        console.error(err)
-				callback( 200, [] )
-      }
-    }
-	})
-}
-
-function getInfoById(id, theater, callback){
+function getEvent( id, callback ){
   var addr = "http://www.finnkino.fi/xml/Events?eventID=" + id
   var req = client.get(addr, function (data, response) {
     parseXml(data, handleMovieInfo)
@@ -340,10 +317,7 @@ function getInfoById(id, theater, callback){
           "Title": result.Events.Event.Title,
           "OriginalTitle": result.Events.Event.OriginalTitle
         }
-        getRating( titles, handleResult)
-        function handleResult(movie) {
-          getSchedule( id, movie, theater, callback)
-        }
+        callback( titles )
       }
 
       catch(err) {
@@ -354,35 +328,52 @@ function getInfoById(id, theater, callback){
   })
 }
 
+function getInfoById(id, theater, callback){
+  getEvent( id, handleEvent )
+  function handleEvent( titles ){
+    getRating( titles, handleResult )
+  }
+
+  function handleResult(movie) {
+    getSchedule( id, movie, theater, callback)
+  }
+}
+
 function getIdByTitle(title, callback){
-  var addr = "http://www.finnkino.fi/xml/Events?listType=" + listType
-  var req = client.get(addr, function (data, response) {
-    parseXml(data, searchMovies)
+  getAllEvents( handleEvents )
 
-    function searchMovies(result) {
-      if(result === "error")
-        res.sendStatus(500)
+  function handleEvents( result ){
+    matchTitle( title, result, handle )
+  }
 
-      checkTitle(title, result.Events.Event, callback )
-    }
-  })
+  function handle( titles ){
+    callback( titles )
+  }
+}
+
+function getRatingAndSchedule( titles, theater, callback ){
+  getRating( titles, handleResult )
+
+  function handleResult(movie) {
+    getSchedule( titles.ID, movie, theater, callback)
+  }
 }
 
 // Gets the ratings and schedule for movie by id
 exports.getMovieInfo = function getMovieInfo(id, title, theater, callback){
   if( id !== undefined && id !== "" )
     getInfoById(id, theater, handleResult)
-  else if( title !== undefined && title !== "" ){
-    //TODO
-    /*exports.getEvents()
-    if( title ==! "" && title.toLowerCase() === movie.Title.toLowerCase()){
-      getRating( titles, handleMovie )
-    }*/
-    return
-  }
-  else {
+  else if( title !== undefined && title !== "" )
+    getIdByTitle( title, handleId )
+  else
     callback(400, "Error: Neither id nor title found!")
-    return
+
+  function handleId( titles ){
+    if( titles === "Not found" ){
+      callback(400, "Error: Title doesn't match any movie!")
+    } else {
+      getRatingAndSchedule( titles, theater, handleResult )
+    }
   }
 
   function handleResult( code, result ){
@@ -441,7 +432,7 @@ exports.getShows = function getShows(date, theater, callback){
         callback( 500, error )
 
 			try {
-        getShowsTimes(result.Schedule.Shows.Show, handleResult)
+        getShowTimes(result.Schedule.Shows.Show, handleResult)
 
         function handleResult(result){
           callback( 200, result )
@@ -454,10 +445,6 @@ exports.getShows = function getShows(date, theater, callback){
 			}
     }
   })
-}
-
-function getMoviesFromEvents(title, movies, callback){
-
 }
 
 exports.getTitles = function getTitles(title, theater, callback){

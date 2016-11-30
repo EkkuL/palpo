@@ -49,7 +49,7 @@ REST API toteutetaan Nodella ja palauttaa vastaukset JSON-formaatissa.
     * **Status codes:**
       * 200: If successful
       * 500: If there is an error parsing the XML or request error
-      * 400: If id doesn't match any movie or id is not found
+      * 400: If id/title doesn't match any movie or id/title is not found
 
 ### /shows?date={date}&theater={theater_id}&movie={movie_id}
   * date format: dd.mm.yyyy, defaults to today
