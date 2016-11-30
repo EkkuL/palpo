@@ -56,24 +56,14 @@ router.get('/rest/movies', function (req, res) {
 })
 
 // Get movies based on the title
+//TODO: Remove duplicates in helpers.js
 router.get('/rest/movies/search/:title', function (req, res) {
-  var title = req.params.title
-	var theater = req.query.theater
-	var result = []
-  helpers.getIdByTitle(title, theater, "NowInTheatres", handleMovies)
+	helpers.getTitles( req.params.title, req.query.theater, handleResults)
 
-  // Callback to be used after the first request is ready
-  function handleMovies( movies ){
-		result = movies
-    helpers.getIdByTitle(title, theater, "ComingSoon", handleBoth)
-  }
-
-  // Callback after both requests are ready
-  function handleBoth( movies ){
-		result.concat(movies)
-    res.status(200)
+	function handleResults(code, result){
+		res.status(code)
     res.json(result)
-  }
+	}
 
 	req.on('error', function (err) {
 		console.error(err)

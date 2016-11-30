@@ -18,12 +18,10 @@ function cutString(s){
 }
 
 // Function for checking if the searched title is found from movies
-function checkTitle(title, movies, listType, callback){
-  var result = []
+function checkTitle(title, movies, result, listType, callback){
   movies.forEach(function(movie) {
     if( movie.Title.toLowerCase().includes(title.toLowerCase()) ||
         movie.OriginalTitle.toLowerCase().includes(title.toLowerCase()) ) {
-          console.log(movie.Title);
           var mov = {
             "ID" : movie.ID,
             "Title" : movie.Title,
@@ -32,8 +30,8 @@ function checkTitle(title, movies, listType, callback){
           result.push(mov)
     }
   })
-  collectRatings(result, callback)
-  //callback(result)
+  //collectRatings(result, callback)
+  callback(result)
 }
 
 // Get the rating for a movie by title
@@ -45,6 +43,7 @@ function getRating( movie, callback ){
       var mov = {
         "ID": movie.ID,
         "Title": movie.Title,
+        "OriginalTitle": movie.OriginalTitle,
         "imdbRating": data.imdbRating,
         "imdbVotes": data.imdbVotes,
         "Metascore": data.Metascore,
@@ -56,6 +55,7 @@ function getRating( movie, callback ){
       var mov = {
         "ID": movie.ID,
         "Title": movie.Title,
+        "OriginalTitle": movie.OriginalTitle,
         "imdbRating": "N/A",
         "imdbVotes": "N/A",
         "Metascore": "N/A",
@@ -232,17 +232,16 @@ function findMovies(shows, callback){
 }
 
 // Gets the id of movies by given title
-exports.getIdByTitle = function getIdByTitle(title, theater, listType, callback){
+function getIdByTitle(title, theater, movies, listType, callback){
   var addr = "http://www.finnkino.fi/xml/Events?listType=" + listType + "&area=" + theater
   var req = client.get(addr, function (data, response) {
-    console.log(req.options);
     parseXml(data, searchMovies)
 
     function searchMovies(result) {
       if(result === "error")
         res.sendStatus(500)
 
-      checkTitle(title, result.Events.Event, listType, callback )
+      checkTitle(title, result.Events.Event, movies, listType, callback )
     }
   })
 }
@@ -399,4 +398,22 @@ exports.getMoviesFromSchedule = function getMoviesFromSchedule(date, theater, ca
 			}
     }
   })
+}
+
+exports.getTitles = function getTitles(title, theater, callback){
+  getIdByTitle(title, theater, [], "NowInTheatres", handleMovies)
+
+  // Callback to be used after the first request is ready
+  function handleMovies( movies ){
+    getIdByTitle(title, theater, movies, "ComingSoon", handleBoth)
+  }
+
+  // Callback after both requests are ready
+  function handleBoth( movies ){
+		collectRatings(movies, handleResults)
+
+    function handleResults(result){
+      callback( 200, result )  
+    }
+  }
 }
