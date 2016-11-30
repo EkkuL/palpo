@@ -91,8 +91,8 @@ router.get('/rest/movie', function (req, res) {
 })
 
 // Get list of movies showing on a given date and area
-router.get('/rest/shows/date/:date', function (req, res) {
-	helpers.getMoviesFromSchedule( req.params.date, req.query.theater, handleResult )
+router.get('/rest/shows', function (req, res) {
+	helpers.getShows( req.query.date, req.query.theater, handleResult )
 
 	function handleResult( code, result ){
 		if( result === "error" )

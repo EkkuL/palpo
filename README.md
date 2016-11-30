@@ -51,16 +51,9 @@ REST API toteutetaan Nodella ja palauttaa vastaukset JSON-formaatissa.
       * 500: If there is an error parsing the XML or request error
       * 400: If id doesn't match any movie or id is not found
 
-### /shows?theater={theater_id}&movie={movie_id}
-  * **HTTP Method:** GET
-    * **Media types:** application/json
-    * **Description:** Palauttaa kaikki tulevat näytökset finnkinon teattereissa
-    * **Status codes:**
-      * 200: If successful
-      * 500: If there is an error parsing the XML or request error
 
-### /shows/date/:date?theater={theater_id}&movie={movie_id}
-  * Format: dd.mm.yyyy, defaults to today
+### /shows?date={date}&theater={theater_id}&movie={movie_id}
+  * date format: dd.mm.yyyy, defaults to today
   * **HTTP Method:** GET
     * **Media types:** application/json
     * **Description:** Palauttaa kaikki näytökset finnkinon teattereissa annettuna päivänä.

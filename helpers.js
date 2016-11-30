@@ -210,25 +210,27 @@ function collectRatings( movies, callback ){
 }
 
 // Gets all events from shows
-function findMovies(shows, callback){
+function getShowsTimes(shows, callback){
   var result = []
 
   if( Array.isArray(shows) ){
     var movies = []
     shows.forEach(function(show) {
-      if( !movies.includes(show.Title) ) {
-        movies.push(show.Title)
-        var movie = {
-          "Title": show.Title,
-          "OriginalTitle": show.OriginalTitle
-        }
-        result.push(movie)
+      var showTime = {
+        "Title": show.Title,
+        "OriginalTitle": show.OriginalTitle,
+        "startTime": show.dttmShowStart,
+        "endTime": show.dttmShowEnd,
+        "Place": show.Theatre,
+        "ageRating": show.Rating
       }
+        result.push(showTime)
     })
   } else {
     result.push(shows.Title)
   }
-  collectRatings( result, callback )
+  callback( result )
+  //collectRatings( result, callback )
 }
 
 // Gets the id of movies by given title
@@ -375,7 +377,7 @@ exports.getEvents = function getEvents(listType, theater, callback){
 }
 
 // Get list of movies showing on a given date and area
-exports.getMoviesFromSchedule = function getMoviesFromSchedule(date, theater, callback){
+exports.getShows = function getShows(date, theater, callback){
   var addr = "http://www.finnkino.fi/xml/Schedule?dt=" + date + "&area=" + theater
   var req = client.get(addr, function (data, response) {
     parseXml(data, handleMovies)
@@ -385,7 +387,7 @@ exports.getMoviesFromSchedule = function getMoviesFromSchedule(date, theater, ca
         callback( 500, error )
 
 			try {
-        findMovies(result.Schedule.Shows.Show, handleResult)
+        getShowsTimes(result.Schedule.Shows.Show, handleResult)
 
         function handleResult(result){
           callback( 200, result )
@@ -413,7 +415,7 @@ exports.getTitles = function getTitles(title, theater, callback){
 		collectRatings(movies, handleResults)
 
     function handleResults(result){
-      callback( 200, result )  
+      callback( 200, result )
     }
   }
 }
