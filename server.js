@@ -34,12 +34,12 @@ router.get('/rest/theaters', function (req, res) {
 
 // TODO: Handle errors
 // Get list of movies running on a theater based on id.
-router.get('/rest/movies/theater/:id', function (req, res) {
+router.get('/rest/movies', function (req, res) {
 
   var listType = "NowInTheatres"
   listType = req.query.listType
 
-	helpers.getEvents( listType, req.params.id, handleEvents )
+	helpers.getEvents( listType, req.query.theater, handleEvents )
 
 	function handleEvents( code, result ){
 		if( result === "error" )
@@ -55,22 +55,30 @@ router.get('/rest/movies/theater/:id', function (req, res) {
 	})
 })
 
-// Get list of movies showing on a given date and area
-router.get('/rest/movies/date/:date', function (req, res) {
-	helpers.getMoviesFromSchedule( req.params.date, req.query.theater, handleResult )
+// Get movies based on the title
+router.get('/rest/movies/search/:title', function (req, res) {
+  var title = req.params.title
+	var theater = req.query.theater
+	var result = []
+  helpers.getIdByTitle(title, theater, "NowInTheatres", handleMovies)
 
-	function handleResult( code, result ){
-		if( result === "error" )
-			res.sendStatus(code)
+  // Callback to be used after the first request is ready
+  function handleMovies( movies ){
+		result = movies
+    helpers.getIdByTitle(title, theater, "ComingSoon", handleBoth)
+  }
 
-		res.status(code)
-		res.json(result)
-	}
+  // Callback after both requests are ready
+  function handleBoth( movies ){
+		result.concat(movies)
+    res.status(200)
+    res.json(result)
+  }
 
-		req.on('error', function (err) {
-			console.error(err)
-			res.sendStatus(500)
-		})
+	req.on('error', function (err) {
+		console.error(err)
+		res.sendStatus(500)
+	})
 })
 
 // Get movie info and show times
@@ -92,27 +100,22 @@ router.get('/rest/movie', function (req, res) {
 	})
 })
 
-// Get movies based on the title
-router.get('/rest/movies/title/:title', function (req, res) {
-  var title = req.params.title
-	var theater = req.query.theater
-  helpers.getIdByTitle(title, theater, "NowInTheatres", [], handleMovies)
+// Get list of movies showing on a given date and area
+router.get('/rest/shows/date/:date', function (req, res) {
+	helpers.getMoviesFromSchedule( req.params.date, req.query.theater, handleResult )
 
-  // Callback to be used after the first request is ready
-  function handleMovies( movies ){
-    helpers.getIdByTitle(title, theater, "ComingSoon", movies, handleBoth)
-  }
+	function handleResult( code, result ){
+		if( result === "error" )
+			res.sendStatus(code)
 
-  // Callback after both requests are ready
-  function handleBoth( movies ){
-    res.status(200)
-    res.json(movies)
-  }
+		res.status(code)
+		res.json(result)
+	}
 
-	req.on('error', function (err) {
-		console.error(err)
-		res.sendStatus(500)
-	})
+		req.on('error', function (err) {
+			console.error(err)
+			res.sendStatus(500)
+		})
 })
 
 // Mount the router on the app
@@ -128,6 +131,6 @@ var server = app.listen(3000, function () {
 
   var port = server.address().port
 
-  console.log("Example app listening at http://%s:%s", "127.0.0.1", port)
+  console.log("Finnkino movie ratings REST API listening at http://%s:%s", "127.0.0.1", port)
 
 })

@@ -18,28 +18,32 @@ function cutString(s){
 }
 
 // Function for checking if the searched title is found from movies
-function checkTitle(title, movies, result, listType, callback){
+function checkTitle(title, movies, listType, callback){
+  var result = []
   movies.forEach(function(movie) {
     if( movie.Title.toLowerCase().includes(title.toLowerCase()) ||
         movie.OriginalTitle.toLowerCase().includes(title.toLowerCase()) ) {
+          console.log(movie.Title);
           var mov = {
             "ID" : movie.ID,
             "Title" : movie.Title,
-            "Status" : listType
+            "OriginalTitle": movie.OriginalTitle
           }
           result.push(mov)
     }
   })
-  callback(result)
+  collectRatings(result, callback)
+  //callback(result)
 }
 
 // Get the rating for a movie by title
 function getRating( movie, callback ){
-  var title = cutString(movie.originalTitle)
+  var title = cutString(movie.OriginalTitle)
   var addr = 'http://www.omdbapi.com/?t=' + title + '&tomatoes=true'
   var req = client.get(addr, function (data, response) {
     if (data.Response === "True") {
       var mov = {
+        "ID": movie.ID,
         "Title": movie.Title,
         "imdbRating": data.imdbRating,
         "imdbVotes": data.imdbVotes,
@@ -50,6 +54,7 @@ function getRating( movie, callback ){
     // Movie is not found in the omdb database
     } else {
       var mov = {
+        "ID": movie.ID,
         "Title": movie.Title,
         "imdbRating": "N/A",
         "imdbVotes": "N/A",
@@ -175,8 +180,9 @@ function collectRatings( movies, callback ){
 
     movies.forEach(function(movie) {
       var titles = {
+        "ID": movie.ID,
         "Title": movie.Title,
-        "originalTitle": movie.OriginalTitle
+        "OriginalTitle": movie.OriginalTitle
       }
       getRating( titles, add2Results )
 
@@ -190,8 +196,9 @@ function collectRatings( movies, callback ){
     })
   } else {
     var titles = {
+      "ID": movies.ID,
       "Title": movies.Title,
-      "originalTitle": movies.OriginalTitle
+      "OriginalTitle": movies.OriginalTitle
     }
     getRating( titles, handleMovie )
 
@@ -225,22 +232,38 @@ function findMovies(shows, callback){
 }
 
 // Gets the id of movies by given title
-exports.getIdByTitle = function getIdByTitle(title, theater, listType, movies, callback){
+exports.getIdByTitle = function getIdByTitle(title, theater, listType, callback){
   var addr = "http://www.finnkino.fi/xml/Events?listType=" + listType + "&area=" + theater
   var req = client.get(addr, function (data, response) {
+    console.log(req.options);
     parseXml(data, searchMovies)
 
     function searchMovies(result) {
       if(result === "error")
         res.sendStatus(500)
 
-      checkTitle(title, result.Events.Event, movies, listType, callback )
+      checkTitle(title, result.Events.Event, listType, callback )
     }
   })
 }
 
-function getMovieByTitle(title, theater, callback) {
-  var addr = "http://www.finnkino.fi/xml/Events?area=" + theater
+function findMovie( title, movies, ifFound ){
+  movies.forEach(function (movie) {
+    if( title.toLowerCase() === movie.Title.toLowerCase() ){
+      var titles = {
+        "ID": movie.ID,
+        "Title": movie.Title,
+        "OriginalTitle": movie.OriginalTitle
+      }
+      getRating( titles, ifFound )
+      return
+    }
+  })
+  notFound()
+}
+
+function searchMovie(title, listType, callback) {
+  var addr = "http://www.finnkino.fi/xml/Events?listType=" + listType
   var req = client.get(addr, function (data, response) {
     parseXml(data, getMovie)
 
@@ -249,7 +272,7 @@ function getMovieByTitle(title, theater, callback) {
         callback( 500, error )
 
 			try {
-        collectRatings( result.Events.Event, handleResults )
+        findMovie( result.Events.Event, callback )
 
         function handleResults( movies ){
           callback( 200, movies )
@@ -262,6 +285,10 @@ function getMovieByTitle(title, theater, callback) {
       }
     }
 	})
+}
+
+function getMovieByTitle(title, theater, callback){
+
 }
 
 // Gets the ratings and schedule for movie by id
@@ -290,8 +317,9 @@ exports.getMovieInfo = function getMovieInfo(id, title, theater, callback){
 
       try {
         var titles = {
+          "ID": result.Events.Event.ID,
           "Title": result.Events.Event.Title,
-          "originalTitle": result.Events.Event.OriginalTitle
+          "OriginalTitle": result.Events.Event.OriginalTitle
         }
         getRating( titles, handleResult)
         function handleResult(movie) {
