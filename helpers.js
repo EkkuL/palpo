@@ -86,7 +86,7 @@ function getRating( movie, callback ){
   })
 }
 
-// Sort movies by imdb ratings, and secondarily by Metascore, thirdly by tomatoMeter
+// Sort movies by imdb ratings, secondarily by Metascore, thirdly by tomatoMeter
 function sortRatings( movies, callback ){
   movies.sort(function(a, b) {
     if (a.imdbRating > b.imdbRating) {
@@ -127,6 +127,7 @@ function sortRatings( movies, callback ){
 }
 
 // Get Show times and places for a movie from a show list
+// TODO: Error handling if shows is undefined
 function getShowInfo(shows, callback) {
   var result = []
   if( Array.isArray(shows) ){
@@ -190,6 +191,7 @@ function parseXml(xml, callback){
 }
 
 // Get ratings for movies
+// TODO: Error handling if movies is undefined
 function collectRatings( movies, callback ){
   var result = []
 
@@ -233,6 +235,7 @@ function collectRatings( movies, callback ){
 }
 
 // Gets all events from shows
+// TODO: Error handling if shows is undefined
 function getShowTimes(shows, callback){
   var result = []
 
@@ -297,11 +300,13 @@ function getAllEvents(callback){
     function handleEvents( result ){
       var final = events.concat(result)
       // TODO: remove duplicates
+      // removeDuplicates(final)
       callback(final)
     }
   }
 }
 
+// Get a specific movie by id
 function getEvent( id, callback ){
   var addr = "http://www.finnkino.fi/xml/Events?eventID=" + id
   var req = client.get(addr, function (data, response) {
@@ -447,6 +452,7 @@ exports.getShows = function getShows(date, theater, callback){
   })
 }
 
+// Get all movies that have the searched title in their title
 exports.getTitles = function getTitles(title, theater, callback){
   getAllEvents( handleEvents )
 
