@@ -59,30 +59,20 @@ function getRating( movie, callback ){
   var addr = 'http://www.omdbapi.com/?t=' + title + '&tomatoes=true'
   var req = client.get(addr, function (data, response) {
     if (data.Response === "True") {
-      var mov = {
-        "ID": movie.ID,
-        "Title": movie.Title,
-        "OriginalTitle": movie.OriginalTitle,
-        "imdbRating": data.imdbRating,
-        "imdbVotes": data.imdbVotes,
-        "Metascore": data.Metascore,
-        "tomatoMeter": data.tomatoMeter,
-        "tomatoUserMeter": data.tomatoUserMeter
-      }
+      movie["imdbRating"] = data.imdbRating
+      movie["imdbVotes"] = data.imdbVotes
+      movie["Metascore"] = data.Metascore
+      movie["tomatoMeter"] = data.tomatoMeter
+      movie["tomatoUserMeter"] = data.tomatoUserMeter
     // Movie is not found in the omdb database
     } else {
-      var mov = {
-        "ID": movie.ID,
-        "Title": movie.Title,
-        "OriginalTitle": movie.OriginalTitle,
-        "imdbRating": "N/A",
-        "imdbVotes": "N/A",
-        "Metascore": "N/A",
-        "tomatoMeter": "N/A",
-        "tomatoUserMeter": "N/A"
-      }
+      movie["imdbRating"] = "N/A"
+      movie["imdbVotes"] = "N/A"
+      movie["Metascore"] = "N/A"
+      movie["tomatoMeter"] = "N/A"
+      movie["tomatoUserMeter"] = "N/A"
     }
-    callback(mov)
+    callback(movie)
   })
 }
 
@@ -127,27 +117,29 @@ function sortRatings( movies, callback ){
 }
 
 // Get Show times and places for a movie from a show list
-// TODO: Error handling if shows is undefined
 function getShowInfo(shows, callback) {
   var result = []
-  if( Array.isArray(shows) ){
-    shows.forEach(function(show) {
+
+  if( shows !== undefined ) {
+    if( Array.isArray(shows) ){
+      shows.forEach(function(show) {
+        var showTime = {
+          "startTime": show.dttmShowStart,
+          "endTime": show.dttmShowEnd,
+          "Place": show.Theatre,
+          "ageRating": show.Rating
+        }
+        result.push(showTime)
+      })
+    } else {
       var showTime = {
-        "startTime": show.dttmShowStart,
-        "endTime": show.dttmShowEnd,
-        "Place": show.Theatre,
-        "ageRating": show.Rating
+        "startTime": shows.dttmShowStart,
+        "endTime": shows.dttmShowEnd,
+        "Place": shows.Theatre,
+        "ageRating": shows.Rating
       }
       result.push(showTime)
-    })
-  } else {
-    var showTime = {
-      "startTime": shows.dttmShowStart,
-      "endTime": shows.dttmShowEnd,
-      "Place": shows.Theatre,
-      "ageRating": shows.Rating
     }
-    result.push(showTime)
   }
   callback(result)
 }
@@ -191,69 +183,71 @@ function parseXml(xml, callback){
 }
 
 // Get ratings for movies
-// TODO: Error handling if movies is undefined
 function collectRatings( movies, callback ){
   var result = []
 
-  if(Array.isArray(movies)) {
-    var maxRequests = movies.length
-    var reqCount = 0
+  if ( movies !== undefined ) {
+    if(Array.isArray(movies)) {
+      var maxRequests = movies.length
+      var reqCount = 0
 
-    if( maxRequests === 0 )
-      callback( [] )
-    else {
-      movies.forEach(function(movie) {
-        var titles = {
-          "ID": movie.ID,
-          "Title": movie.Title,
-          "OriginalTitle": movie.OriginalTitle
-        }
-        getRating( titles, add2Results )
+      if( maxRequests === 0 )
+        callback( [] )
+      else {
+        movies.forEach(function(movie) {
+          var titles = {
+            "ID": movie.ID,
+            "Title": movie.Title,
+            "OriginalTitle": movie.OriginalTitle
+          }
+          getRating( titles, add2Results )
 
-        function add2Results(movie){
-          result.push(movie)
-          reqCount ++
-          //All movie requests have been received
-          if (reqCount === maxRequests)
-            sortRatings( result, callback )
-        }
-      })
-    }
-  } else {
-    var titles = {
-      "ID": movies.ID,
-      "Title": movies.Title,
-      "OriginalTitle": movies.OriginalTitle
-    }
-    getRating( titles, handleMovie )
+          function add2Results(movie){
+            result.push(movie)
+            reqCount ++
+            //All movie requests have been received
+            if (reqCount === maxRequests)
+              sortRatings( result, callback )
+          }
+        })
+      }
+    } else {
+      var titles = {
+        "ID": movies.ID,
+        "Title": movies.Title,
+        "OriginalTitle": movies.OriginalTitle
+      }
+      getRating( titles, handleMovie )
 
-    function handleMovie( movie ){
-      result.push( movie )
-      callback( result )
+      function handleMovie( movie ){
+        result.push( movie )
+        callback( result )
+      }
     }
   }
 }
 
 // Gets all events from shows
-// TODO: Error handling if shows is undefined
 function getShowTimes(shows, callback){
   var result = []
 
-  if( Array.isArray(shows) ){
-    var movies = []
-    shows.forEach(function(show) {
-      var showTime = {
-        "Title": show.Title,
-        "OriginalTitle": show.OriginalTitle,
-        "startTime": show.dttmShowStart,
-        "endTime": show.dttmShowEnd,
-        "Place": show.Theatre,
-        "ageRating": show.Rating
-      }
-        result.push(showTime)
-    })
-  } else {
-    result.push(shows.Title)
+  if( shows !== undefined ) {
+    if( Array.isArray(shows) ){
+      var movies = []
+      shows.forEach(function(show) {
+        var showTime = {
+          "Title": show.Title,
+          "OriginalTitle": show.OriginalTitle,
+          "startTime": show.dttmShowStart,
+          "endTime": show.dttmShowEnd,
+          "Place": show.Theatre,
+          "ageRating": show.Rating
+        }
+          result.push(showTime)
+      })
+    } else {
+      result.push(shows.Title)
+    }
   }
   callback( result )
 }
