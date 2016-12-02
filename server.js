@@ -6,6 +6,9 @@ var router = express.Router()
 
 var util = require('util')
 
+app.set('port', (process.env.PORT || 5000));
+
+
 // Print timestamp and request url & params for each query.
 router.use(function timeLog (req, res, next) {
 	console.log('[', Date.now().toString(), '] Url: ', req.url, "Request params: ", req.params)
@@ -119,10 +122,6 @@ app.use(function(req, res){
    res.send("Not found.")
 })
 
-var server = app.listen(3000, function () {
-
-  var port = server.address().port
-
-  console.log("Finnkino movie ratings REST API listening at http://%s:%s", "127.0.0.1", port)
-
+var server = app.listen(app.get('port'), function () {
+  console.log('Node app is running on port', app.get('port'));
 })
