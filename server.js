@@ -25,7 +25,7 @@ router.get('/rest/theaters', function (req, res) {
 			res.sendStatus(code)
 
 		res.status(code)
-		res.json(result)
+		res.jsonp(result)
 	}
 
 	req.on('error', function (err) {
@@ -49,7 +49,7 @@ router.get('/rest/movies', function (req, res) {
 			res.sendStatus(code)
 
 		res.status(code)
-		res.json(result)
+		res.jsonp(result)
 	}
 
 	req.on('error', function (err) {
@@ -65,7 +65,7 @@ router.get('/rest/movies/search/:title', function (req, res) {
 
 	function handleResults(code, result){
 		res.status(code)
-    res.json(result)
+    res.jsonp(result)
 	}
 
 	req.on('error', function (err) {
@@ -85,7 +85,7 @@ router.get('/rest/movie', function (req, res) {
     }
 
     res.status(code)
-    res.json(result)
+    res.jsonp(result)
   }
 
 	req.on('error', function (err) {
@@ -104,7 +104,7 @@ router.get('/rest/shows', function (req, res) {
 			res.sendStatus(code)
 
 		res.status(code)
-		res.json(result)
+		res.jsonp(result)
 	}
 
 		req.on('error', function (err) {
