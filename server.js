@@ -28,7 +28,7 @@ router.get('/rest/theaters', function (req, res) {
 		if( req.query.jsonp )
 			res.jsonp(result)
 		else
-			rest.json(result)
+			res.json(result)
 		}
 	}
 
@@ -56,7 +56,7 @@ router.get('/rest/movies', function (req, res) {
 		if( req.query.jsonp )
 			res.jsonp(result)
 		else
-			rest.json(result)
+			res.json(result)
 	}
 
 	req.on('error', function (err) {
@@ -75,7 +75,7 @@ router.get('/rest/movies/search/:title', function (req, res) {
 	if( req.query.jsonp )
 		res.jsonp(result)
 	else
-		rest.json(result)
+		res.json(result)
 	}
 
 	req.on('error', function (err) {
@@ -98,7 +98,7 @@ router.get('/rest/movie', function (req, res) {
 	if( req.query.jsonp )
 		res.jsonp(result)
 	else
-		rest.json(result)
+		res.json(result)
 	}
   }
 
@@ -121,7 +121,7 @@ router.get('/rest/shows', function (req, res) {
 		if( req.query.jsonp )
 			res.jsonp(result)
 		else
-			rest.json(result)
+			res.json(result)
 		}
 	}
 
