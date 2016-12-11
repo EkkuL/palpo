@@ -3,6 +3,10 @@ Palvelupohjaiset järjestelmät kurssin harjoitustyö
 
 TIE-26300 Palvelupohjaiset järjestelmät kurssin harjoitustyö, jossa ideana yhdistää kaksi julkista API:a (API Mashup) ja tuottaa oma REST rajapinta.
 
+## Sovellus:
+* REST API - https://finnkino-ratings-rest-api.herokuapp.com/rest
+* Frontend - https://finnkino-ratings-api-example.herokuapp.com
+
 ## Käytettävät rajapinnat:
 * Finnkino XML Services - http://www.finnkino.fi/xml
 * OMDb API - http://www.omdbapi.com/
